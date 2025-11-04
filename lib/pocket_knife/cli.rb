@@ -74,10 +74,15 @@ module PocketKnife
     #
     # @raise [InvalidInputError] If inputs cannot be parsed or are invalid
     def validate_inputs
+      # Check for % symbol in percentage
+      if @percentage_str.include?('%')
+        raise InvalidInputError, 'Invalid percentage. Please provide a whole number without the % symbol.'
+      end
+
       # Parse percentage (must be integer)
       @percentage = Integer(@percentage_str)
     rescue ArgumentError
-      raise InvalidInputError, 'Percentage must be a whole number (e.g., 15 for 15%)'
+      raise InvalidInputError, 'Invalid percentage. Please provide a whole number.'
     else
       # Validate percentage is non-negative
       raise InvalidInputError, 'Percentage cannot be negative' if @percentage.negative?
@@ -86,7 +91,7 @@ module PocketKnife
       begin
         @base = Float(@base_str)
       rescue ArgumentError
-        raise InvalidInputError, 'Amount must be a valid number'
+        raise InvalidInputError, 'Invalid amount. Please provide a numeric value.'
       end
 
       # Validate base is finite

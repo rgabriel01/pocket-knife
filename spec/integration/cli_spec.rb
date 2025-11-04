@@ -39,12 +39,18 @@ RSpec.describe PocketKnife::CLI do
     context 'with invalid percentage' do
       it 'raises InvalidInputError for non-numeric percentage' do
         expect { described_class.run(%w[calc 100 abc]) }
-          .to raise_error(PocketKnife::InvalidInputError, /whole number/)
+          .to raise_error(PocketKnife::InvalidInputError, 'Invalid percentage. Please provide a whole number.')
       end
 
       it 'raises InvalidInputError for decimal percentage' do
         expect { described_class.run(['calc', '100', '12.5']) }
-          .to raise_error(PocketKnife::InvalidInputError, /whole number/)
+          .to raise_error(PocketKnife::InvalidInputError, 'Invalid percentage. Please provide a whole number.')
+      end
+
+      it 'raises InvalidInputError for percentage with % symbol' do
+        expect { described_class.run(['calc', '100', '20%']) }
+          .to raise_error(PocketKnife::InvalidInputError,
+                          'Invalid percentage. Please provide a whole number without the % symbol.')
       end
 
       it 'raises InvalidInputError for negative percentage' do
@@ -56,7 +62,7 @@ RSpec.describe PocketKnife::CLI do
     context 'with invalid base' do
       it 'raises InvalidInputError for non-numeric base' do
         expect { described_class.run(%w[calc xyz 20]) }
-          .to raise_error(PocketKnife::InvalidInputError, /valid number/)
+          .to raise_error(PocketKnife::InvalidInputError, 'Invalid amount. Please provide a numeric value.')
       end
     end
 
