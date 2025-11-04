@@ -1,0 +1,39 @@
+# Ruby
+*.gem
+*.rbc
+.bundle
+.config
+coverage/
+InstalledFiles
+lib/bundler/man
+pkg
+rdoc
+spec/reports
+test/tmp
+test/version_tmp
+tmp
+.rspec_status
+
+# RuboCop
+.rubocop-*
+
+# SimpleCov
+coverage/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+
+# Vendor
+vendor/bundle/
