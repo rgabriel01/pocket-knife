@@ -1,0 +1,18 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require_relative '../lib/pocket_knife'
+
+begin
+  PocketKnife::CLI.run(ARGV)
+  exit 0
+rescue PocketKnife::InvalidInputError => e
+  warn "Error: #{e.message}"
+  exit 2
+rescue PocketKnife::CLIError, PocketKnife::CalculationError => e
+  warn "Error: #{e.message}"
+  exit 1
+rescue StandardError => e
+  warn "Unexpected error: #{e.message}"
+  exit 1
+end

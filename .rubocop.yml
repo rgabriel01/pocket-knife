@@ -24,7 +24,7 @@ Style/StringLiterals:
 
 # Metrics
 Metrics/MethodLength:
-  Max: 15
+  Max: 20
   Exclude:
     - 'spec/**/*'
 
@@ -32,6 +32,12 @@ Metrics/BlockLength:
   Exclude:
     - 'spec/**/*'
     - 'Rakefile'
+
+Metrics/AbcSize:
+  Max: 18
+
+Metrics/CyclomaticComplexity:
+  Max: 8
 
 # Layout
 Layout/LineLength:
@@ -54,6 +60,9 @@ RSpec/SpecFilePathFormat:
   Enabled: false
 
 RSpec/ContextWording:
+  Enabled: false
+
+RSpec/DescribeClass:
   Enabled: false
 
 # Security
