@@ -26,11 +26,11 @@ task :install do
 
   abort 'Error: bin/pocket-knife not found. Run implementation first.' unless File.exist?(bin_file)
 
-  # Copy binary to /usr/local/bin
-  sh "cp #{bin_file} #{install_path}"
-  sh "chmod +x #{install_path}"
+  # Copy binary to /usr/local/bin (requires sudo)
+  sh "sudo cp #{bin_file} #{install_path}"
+  sh "sudo chmod +x #{install_path}"
 
-  puts "✅ pocket-knife installed to #{install_path}"
+  puts "\n✅ pocket-knife installed to #{install_path}"
   puts "Run 'pocket-knife --help' to get started"
 end
 
@@ -40,8 +40,8 @@ task :uninstall do
   install_path = '/usr/local/bin/pocket-knife'
 
   if File.exist?(install_path)
-    sh "rm #{install_path}"
-    puts "✅ pocket-knife uninstalled from #{install_path}"
+    sh "sudo rm #{install_path}"
+    puts "\n✅ pocket-knife uninstalled from #{install_path}"
   else
     puts "pocket-knife is not installed at #{install_path}"
   end

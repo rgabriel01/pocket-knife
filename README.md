@@ -26,7 +26,7 @@ bundle install
 bundle exec rake install
 ```
 
-This installs `pocket-knife` to `/usr/local/bin/`.
+This installs `pocket-knife` to `/usr/local/bin/` (requires sudo password).
 
 ## Usage
 
