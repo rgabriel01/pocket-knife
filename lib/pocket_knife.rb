@@ -5,9 +5,9 @@ module PocketKnife
   VERSION = '0.1.0'
 end
 
-# Require all library files (will be populated in subsequent stories)
-# require_relative 'pocket_knife/errors'
-# require_relative 'pocket_knife/calculation_request'
-# require_relative 'pocket_knife/calculation_result'
-# require_relative 'pocket_knife/calculator'
+# Require all library files in dependency order
+require_relative 'pocket_knife/errors'
+require_relative 'pocket_knife/calculation_request'
+require_relative 'pocket_knife/calculation_result'
+require_relative 'pocket_knife/calculator'
 # require_relative 'pocket_knife/cli'

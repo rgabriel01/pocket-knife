@@ -50,6 +50,12 @@ RSpec/ExampleLength:
 RSpec/MultipleExpectations:
   Max: 5
 
+RSpec/SpecFilePathFormat:
+  Enabled: false
+
+RSpec/ContextWording:
+  Enabled: false
+
 # Security
 Security/Eval:
   Enabled: true
