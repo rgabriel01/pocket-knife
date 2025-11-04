@@ -119,9 +119,11 @@ module PocketKnife
     # @return [void]
     def display_help
       puts <<~HELP
-        Usage: pocket-knife calc <amount> <percentage>
+        Pocket Knife - Command-line percentage calculator
 
-        Calculate what percentage of an amount equals.
+        Calculate percentages quickly without leaving your terminal.
+
+        Usage: pocket-knife calc <amount> <percentage>
 
         Examples:
           pocket-knife calc 200 15
@@ -129,6 +131,9 @@ module PocketKnife
 
           pocket-knife calc 99.99 10
           # => 10.00
+
+          pocket-knife calc 45.50 20
+          # => 9.10
 
         Arguments:
           amount      - Any numeric value (integer or decimal)
