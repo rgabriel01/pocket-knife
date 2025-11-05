@@ -351,9 +351,9 @@ Then set up your API key...
 
 ### Phase 1: Enhanced Error Handling in CLI (90 minutes)
 
-- [ ] **1.1** Open `lib/pocket_knife/cli.rb` and locate `execute_ask` method
-- [ ] **1.2** Add comprehensive rescue blocks (see Error Handling Matrix)
-- [ ] **1.3** Create error handler methods for each error type:
+- [x] **1.1** Open `lib/pocket_knife/cli.rb` and locate `execute_ask` method
+- [x] **1.2** Add comprehensive rescue blocks (see Error Handling Matrix)
+- [x] **1.3** Create error handler methods for each error type:
   - `handle_missing_gem_error`
   - `handle_missing_api_key_error`
   - `handle_invalid_api_key_error`
@@ -361,83 +361,83 @@ Then set up your API key...
   - `handle_timeout_error`
   - `handle_general_llm_error(e)`
   - `handle_unexpected_error(e)`
-- [ ] **1.4** Implement `suggest_calc_equivalent` helper method
-- [ ] **1.5** Ensure all error messages follow standard template
-- [ ] **1.6** Verify correct exit codes for each error type
-- [ ] **1.7** Test error handling manually (see Verification Steps)
-- [ ] **1.8** Run rubocop: `bundle exec rubocop lib/pocket_knife/cli.rb`
+- [x] **1.4** Implement `suggest_calc_equivalent` helper method
+- [x] **1.5** Ensure all error messages follow standard template
+- [x] **1.6** Verify correct exit codes for each error type
+- [x] **1.7** Test error handling manually (see Verification Steps)
+- [x] **1.8** Run rubocop: `bundle exec rubocop lib/pocket_knife/cli.rb`
 
 ### Phase 2: Enhanced API Key Validation (45 minutes)
 
-- [ ] **2.1** Open `lib/pocket_knife/llm_config.rb`
-- [ ] **2.2** Add custom exception classes if not present:
+- [x] **2.1** Open `lib/pocket_knife/llm_config.rb`
+- [x] **2.2** Add custom exception classes if not present:
   - `MissingAPIKeyError`
   - `InvalidAPIKeyError`
-- [ ] **2.3** Create `validate_api_key!` method
-- [ ] **2.4** Check for common mistakes (quotes, spaces)
-- [ ] **2.5** Validate key format (starts with sk-, minimum length)
-- [ ] **2.6** Add provider-specific validation (OpenAI vs Anthropic)
-- [ ] **2.7** Update `configure!` to call validation
-- [ ] **2.8** Add unit tests for validation in `spec/unit/llm_config_spec.rb`
-- [ ] **2.9** Run tests: `bundle exec rspec spec/unit/llm_config_spec.rb`
+- [x] **2.3** Create `validate_api_key!` method
+- [x] **2.4** Check for common mistakes (quotes, spaces)
+- [x] **2.5** Validate key format (starts with sk-, minimum length)
+- [x] **2.6** Add provider-specific validation (OpenAI vs Anthropic)
+- [x] **2.7** Update `configure!` to call validation
+- [x] **2.8** Add unit tests for validation in `spec/unit/llm_config_spec.rb`
+- [x] **2.9** Run tests: `bundle exec rspec spec/unit/llm_config_spec.rb`
 
 ### Phase 3: E2E Error Scenario Tests (90 minutes)
 
-- [ ] **3.1** Create `spec/e2e/ask_command_e2e_spec.rb`
-- [ ] **3.2** Write test for successful ask command flow
-- [ ] **3.3** Write test for missing RubyLLM gem
-- [ ] **3.4** Write test for missing API keys
-- [ ] **3.5** Write test for invalid API key format
-- [ ] **3.6** Write test for malformed API key (quotes, spaces)
-- [ ] **3.7** Write test for network timeout (mock)
-- [ ] **3.8** Write test for rate limit error (mock)
-- [ ] **3.9** Write test for empty query
-- [ ] **3.10** Verify error messages are user-friendly
-- [ ] **3.11** Verify exit codes are correct
-- [ ] **3.12** Verify fallback suggestions present
-- [ ] **3.13** Run E2E tests: `bundle exec rspec spec/e2e/ask_command_e2e_spec.rb`
+- [x] **3.1** Create `spec/e2e/ask_command_e2e_spec.rb`
+- [x] **3.2** Write test for successful ask command flow
+- [x] **3.3** Write test for missing RubyLLM gem
+- [x] **3.4** Write test for missing API keys
+- [x] **3.5** Write test for invalid API key format
+- [x] **3.6** Write test for malformed API key (quotes, spaces)
+- [x] **3.7** Write test for network timeout (mock)
+- [x] **3.8** Write test for rate limit error (mock)
+- [x] **3.9** Write test for empty query
+- [x] **3.10** Verify error messages are user-friendly
+- [x] **3.11** Verify exit codes are correct
+- [x] **3.12** Verify fallback suggestions present
+- [x] **3.13** Run E2E tests: `bundle exec rspec spec/e2e/ask_command_e2e_spec.rb`
 
 ### Phase 4: README Documentation Updates (90 minutes)
 
-- [ ] **4.1** Open `README.md`
-- [ ] **4.2** Update Features section - add AI-powered bullet point
-- [ ] **4.3** Update Requirements section - clarify optional LLM dependency
-- [ ] **4.4** Update Installation section:
+- [x] **4.1** Open `README.md`
+- [x] **4.2** Update Features section - add AI-powered bullet point
+- [x] **4.3** Update Requirements section - clarify optional LLM dependency
+- [x] **4.4** Update Installation section:
   - Document standard install (calc only)
   - Document LLM install (with --with llm)
   - Show both commands side by side
-- [ ] **4.5** Update Usage section:
+- [x] **4.5** Update Usage section:
   - Keep existing calc examples
   - Add natural language ask examples
   - Add "When to use calc vs ask" guidance
-- [ ] **4.6** Create new "LLM Features" section:
+- [x] **4.6** Create new "LLM Features" section:
   - Feature overview
   - API key setup (OpenAI & Anthropic)
   - Provider priority documentation
   - 10+ usage examples with variety
   - Troubleshooting common issues
-- [ ] **4.7** Create new "FAQ" section:
+- [x] **4.7** Create new "FAQ" section:
   - Common questions
   - API costs and usage
   - Privacy considerations
-- [ ] **4.8** Test all README code examples manually
-- [ ] **4.9** Verify markdown formatting
+- [x] **4.8** Test all README code examples manually
+- [x] **4.9** Verify markdown formatting
 
 ### Phase 5: Security & Privacy Documentation (45 minutes)
 
-- [ ] **5.1** Add "Security & Privacy" section to README
-- [ ] **5.2** Document:
+- [x] **5.1** Add "Security & Privacy" section to README
+- [x] **5.2** Document:
   - API keys management best practices
   - Never commit keys to version control
   - Key rotation recommendations
-- [ ] **5.3** Document data privacy:
+- [x] **5.3** Document data privacy:
   - Queries sent to third-party APIs
   - Data retention by providers
   - When to use calc for sensitive data
-- [ ] **5.4** Link to provider privacy policies:
+- [x] **5.4** Link to provider privacy policies:
   - OpenAI data policy
   - Anthropic data policy
-- [ ] **5.5** Create `docs/TROUBLESHOOTING.md` with:
+- [x] **5.5** Create `docs/TROUBLESHOOTING.md` with:
   - Installation issues
   - API key problems
   - Network errors
@@ -447,22 +447,22 @@ Then set up your API key...
 
 ### Phase 6: Final Documentation Review & Testing (60 minutes)
 
-- [ ] **6.1** Review all documentation for clarity and accuracy
-- [ ] **6.2** Test every code example in README
-- [ ] **6.3** Verify all links work
-- [ ] **6.4** Check markdown formatting renders correctly
-- [ ] **6.5** Verify table of contents updated
-- [ ] **6.6** Run full test suite: `bundle exec rake test`
-- [ ] **6.7** Check test coverage: `COVERAGE=true bundle exec rspec`
-- [ ] **6.8** Verify coverage remains 90%+
-- [ ] **6.9** Run rubocop: `bundle exec rubocop`
-- [ ] **6.10** Manual smoke test of all features:
+- [x] **6.1** Review all documentation for clarity and accuracy
+- [x] **6.2** Test every code example in README
+- [x] **6.3** Verify all links work
+- [x] **6.4** Check markdown formatting renders correctly
+- [x] **6.5** Verify table of contents updated
+- [x] **6.6** Run full test suite: `bundle exec rake test`
+- [x] **6.7** Check test coverage: `COVERAGE=true bundle exec rspec`
+- [x] **6.8** Verify coverage remains 90%+
+- [x] **6.9** Run rubocop: `bundle exec rubocop`
+- [x] **6.10** Manual smoke test of all features:
   - Calc command
   - Ask command with API key
   - Ask command without API key
   - All error scenarios
   - Help text for both commands
-- [ ] **6.11** Git commit: "feat: Add error handling, fallbacks & documentation (Story LLM-3)"
+- [x] **6.11** Git commit: "feat: Add error handling, fallbacks & documentation (Story LLM-3)"
 
 ---
 

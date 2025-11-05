@@ -289,8 +289,8 @@ end
 
 ### Phase 1: Early Routing Setup (45 minutes)
 
-- [ ] **1.1** Open `lib/pocket_knife/cli.rb` and locate `execute` method
-- [ ] **1.2** Add early routing check at TOP of execute method:
+- [x] **1.1** Open `lib/pocket_knife/cli.rb` and locate `execute` method
+- [x] **1.2** Add early routing check at TOP of execute method:
   ```ruby
   def execute
     if @args[0] == 'ask'
@@ -299,69 +299,69 @@ end
     end
     # Existing code unchanged below
   ```
-- [ ] **1.3** Run existing tests: `bundle exec rspec spec/integration/cli_spec.rb`
-- [ ] **1.4** Verify all calc tests still pass (no regressions)
-- [ ] **1.5** Test calc command manually: `bundle exec bin/pocket-knife calc 100 20`
+- [x] **1.3** Run existing tests: `bundle exec rspec spec/integration/cli_spec.rb`
+- [x] **1.4** Verify all calc tests still pass (no regressions)
+- [x] **1.5** Test calc command manually: `bundle exec bin/pocket-knife calc 100 20`
 
 ### Phase 2: Execute Ask Method (90 minutes)
 
-- [ ] **2.1** Create `execute_ask` private method skeleton
-- [ ] **2.2** Implement query parsing: `@query = @args[1..-1].join(' ')`
-- [ ] **2.3** Add empty query validation with CLIError
-- [ ] **2.4** Check LLM availability with `LLMConfig.llm_available?`
-- [ ] **2.5** Check API key configuration with `LLMConfig.configured?`
-- [ ] **2.6** Add configuration error handling with helpful messages
-- [ ] **2.7** Call `LLMConfig.configure!` to set up RubyLLM
-- [ ] **2.8** Create chat instance: `chat = RubyLLM.chat`
-- [ ] **2.9** Register tool: `chat.with_tool(PercentageCalculatorTool)`
-- [ ] **2.10** Send query: `response = chat.ask(@query)`
-- [ ] **2.11** Output response: `puts response.content`
-- [ ] **2.12** Add error handling for `RubyLLM::Error`
-- [ ] **2.13** Run rubocop: `bundle exec rubocop lib/pocket_knife/cli.rb`
+- [x] **2.1** Create `execute_ask` private method skeleton
+- [x] **2.2** Implement query parsing: `@query = @args[1..-1].join(' ')`
+- [x] **2.3** Add empty query validation with CLIError
+- [x] **2.4** Check LLM availability with `LLMConfig.llm_available?`
+- [x] **2.5** Check API key configuration with `LLMConfig.configured?`
+- [x] **2.6** Add configuration error handling with helpful messages
+- [x] **2.7** Call `LLMConfig.configure!` to set up RubyLLM
+- [x] **2.8** Create chat instance: `chat = RubyLLM.chat`
+- [x] **2.9** Register tool: `chat.with_tool(PercentageCalculatorTool)`
+- [x] **2.10** Send query: `response = chat.ask(@query)`
+- [x] **2.11** Output response: `puts response.content`
+- [x] **2.12** Add error handling for `RubyLLM::Error`
+- [x] **2.13** Run rubocop: `bundle exec rubocop lib/pocket_knife/cli.rb`
 
 ### Phase 3: Help Text Updates (30 minutes)
 
-- [ ] **3.1** Update `display_help` method to include ask command
-- [ ] **3.2** Add usage examples for both calc and ask
-- [ ] **3.3** Add note about API key setup for ask command
-- [ ] **3.4** Verify help flag works: `bundle exec bin/pocket-knife --help`
-- [ ] **3.5** Test ask help: `bundle exec bin/pocket-knife ask --help`
-- [ ] **3.6** Verify calc help unchanged: `bundle exec bin/pocket-knife calc --help`
+- [x] **3.1** Update `display_help` method to include ask command
+- [x] **3.2** Add usage examples for both calc and ask
+- [x] **3.3** Add note about API key setup for ask command
+- [x] **3.4** Verify help flag works: `bundle exec bin/pocket-knife --help`
+- [x] **3.5** Test ask help: `bundle exec bin/pocket-knife ask --help`
+- [x] **3.6** Verify calc help unchanged: `bundle exec bin/pocket-knife calc --help`
 
 ### Phase 4: Integration Tests (120 minutes)
 
-- [ ] **4.1** Create `spec/integration/ask_command_spec.rb`
-- [ ] **4.2** Set up RubyLLM mocking helpers (see Mocking Strategy)
-- [ ] **4.3** Write happy path test: "What is 20% of 100?"
-- [ ] **4.4** Write alternative phrasing tests (3-4 variations)
-- [ ] **4.5** Write missing gem error test (mock LoadError)
-- [ ] **4.6** Write missing API key error test
-- [ ] **4.7** Write API error test (mock RubyLLM::Error)
-- [ ] **4.8** Write empty query error test
-- [ ] **4.9** Write help flag tests
-- [ ] **4.10** **CRITICAL:** Write calc isolation tests
+- [x] **4.1** Create `spec/integration/ask_command_spec.rb`
+- [x] **4.2** Set up RubyLLM mocking helpers (see Mocking Strategy)
+- [x] **4.3** Write happy path test: "What is 20% of 100?"
+- [x] **4.4** Write alternative phrasing tests (3-4 variations)
+- [x] **4.5** Write missing gem error test (mock LoadError)
+- [x] **4.6** Write missing API key error test
+- [x] **4.7** Write API error test (mock RubyLLM::Error)
+- [x] **4.8** Write empty query error test
+- [x] **4.9** Write help flag tests
+- [x] **4.10** **CRITICAL:** Write calc isolation tests
   - Test calc still works: `['calc', '100', '20']`
   - Test calc with decimals: `['calc', '99.99', '10']`
   - Test calc error cases unchanged
-- [ ] **4.11** Run new tests: `bundle exec rspec spec/integration/ask_command_spec.rb`
-- [ ] **4.12** Verify all tests pass
+- [x] **4.11** Run new tests: `bundle exec rspec spec/integration/ask_command_spec.rb`
+- [x] **4.12** Verify all tests pass
 
 ### Phase 5: Regression & Performance Verification (45 minutes)
 
-- [ ] **5.1** Run FULL test suite: `bundle exec rake test`
-- [ ] **5.2** Verify NO existing tests modified
-- [ ] **5.3** Verify all tests pass (unit, integration, e2e)
-- [ ] **5.4** Check test coverage: `COVERAGE=true bundle exec rspec`
-- [ ] **5.5** Verify coverage remains 90%+
-- [ ] **5.6** **CRITICAL:** Test calc command still works identically
+- [x] **5.1** Run FULL test suite: `bundle exec rake test`
+- [x] **5.2** Verify NO existing tests modified
+- [x] **5.3** Verify all tests pass (unit, integration, e2e)
+- [x] **5.4** Check test coverage: `COVERAGE=true bundle exec rspec`
+- [x] **5.5** Verify coverage remains 90%+
+- [x] **5.6** **CRITICAL:** Test calc command still works identically
   ```bash
   bundle exec bin/pocket-knife calc 100 20
   # Expected: 20.00 (same as before)
   ```
-- [ ] **5.7** Test calc performance (should be instant)
-- [ ] **5.8** Verify no LLM code loaded when running calc
-- [ ] **5.9** Run rubocop: `bundle exec rubocop`
-- [ ] **5.10** Git commit: "feat: Add natural language ask command (Story LLM-2)"
+- [x] **5.7** Test calc performance (should be instant)
+- [x] **5.8** Verify no LLM code loaded when running calc
+- [x] **5.9** Run rubocop: `bundle exec rubocop`
+- [x] **5.10** Git commit: "feat: Add natural language ask command (Story LLM-2)"
 
 ---
 

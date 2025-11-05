@@ -258,69 +258,69 @@ end
 
 ### Phase 1: Setup & Gemfile (30 minutes)
 
-- [ ] **1.1** Add optional gem group to Gemfile
+- [x] **1.1** Add optional gem group to Gemfile
   ```ruby
   group :llm, optional: true do
     gem 'ruby_llm', '~> 1.9'
   end
   ```
-- [ ] **1.2** Run `bundle install` (without `--with llm`) - verify no changes
-- [ ] **1.3** Run `bundle install --with llm` - verify RubyLLM installs
-- [ ] **1.4** Run `bundle exec rake test` - verify all existing tests pass
-- [ ] **1.5** Document both installation modes in README "Installation" section
+- [x] **1.2** Run `bundle install` (without `--with llm`) - verify no changes
+- [x] **1.3** Run `bundle install --with llm` - verify RubyLLM installs
+- [x] **1.4** Run `bundle exec rake test` - verify all existing tests pass
+- [x] **1.5** Document both installation modes in README "Installation" section
 
 ### Phase 2: LLMConfig Class (60 minutes)
 
-- [ ] **2.1** Create `lib/pocket_knife/llm_config.rb` with class skeleton
-- [ ] **2.2** Implement `llm_available?` method with `require 'ruby_llm'` rescue
-- [ ] **2.3** Implement `configured?` method checking ENV vars
-- [ ] **2.4** Implement `configure!` method with provider priority (OpenAI first)
-- [ ] **2.5** Add custom error classes: `MissingAPIKeyError`, `InvalidAPIKeyError`
-- [ ] **2.6** Add frozen string literal and module namespacing
-- [ ] **2.7** Run `bundle exec rubocop lib/pocket_knife/llm_config.rb`
-- [ ] **2.8** Create unit test file: `spec/unit/llm_config_spec.rb`
-- [ ] **2.9** Write tests for all methods (see Testing Strategy)
-- [ ] **2.10** Run tests: `bundle exec rspec spec/unit/llm_config_spec.rb`
-- [ ] **2.11** Verify 100% coverage for this file
+- [x] **2.1** Create `lib/pocket_knife/llm_config.rb` with class skeleton
+- [x] **2.2** Implement `llm_available?` method with `require 'ruby_llm'` rescue
+- [x] **2.3** Implement `configured?` method checking ENV vars
+- [x] **2.4** Implement `configure!` method with provider priority (OpenAI first)
+- [x] **2.5** Add custom error classes: `MissingAPIKeyError`, `InvalidAPIKeyError`
+- [x] **2.6** Add frozen string literal and module namespacing
+- [x] **2.7** Run `bundle exec rubocop lib/pocket_knife/llm_config.rb`
+- [x] **2.8** Create unit test file: `spec/unit/llm_config_spec.rb`
+- [x] **2.9** Write tests for all methods (see Testing Strategy)
+- [x] **2.10** Run tests: `bundle exec rspec spec/unit/llm_config_spec.rb`
+- [x] **2.11** Verify 100% coverage for this file
 
 ### Phase 3: PercentageCalculatorTool Class (90 minutes)
 
-- [ ] **3.1** **CRITICAL:** Verify `CalculationRequest` constructor signature first!
-- [ ] **3.2** Create `lib/pocket_knife/percentage_calculator_tool.rb` with class skeleton
-- [ ] **3.3** Add `< RubyLLM::Tool` inheritance
-- [ ] **3.4** Add tool description: `description "Calculate what percentage of a number equals"`
-- [ ] **3.5** Define parameters with correct types and descriptions
-- [ ] **3.6** Implement `execute` method with Calculator integration
-- [ ] **3.7** Add error handling for `InvalidInputError` and `CalculationError`
-- [ ] **3.8** Add frozen string literal and module namespacing
-- [ ] **3.9** Run `bundle exec rubocop lib/pocket_knife/percentage_calculator_tool.rb`
-- [ ] **3.10** Create unit test file: `spec/unit/percentage_calculator_tool_spec.rb`
-- [ ] **3.11** Mock `RubyLLM::Tool` parent class appropriately
-- [ ] **3.12** Write tests for successful execution and error cases
-- [ ] **3.13** Run tests: `bundle exec rspec spec/unit/percentage_calculator_tool_spec.rb`
-- [ ] **3.14** Verify 100% coverage for this file
+- [x] **3.1** **CRITICAL:** Verify `CalculationRequest` constructor signature first!
+- [x] **3.2** Create `lib/pocket_knife/percentage_calculator_tool.rb` with class skeleton
+- [x] **3.3** Add `< RubyLLM::Tool` inheritance
+- [x] **3.4** Add tool description: `description "Calculate what percentage of a number equals"`
+- [x] **3.5** Define parameters with correct types and descriptions
+- [x] **3.6** Implement `execute` method with Calculator integration
+- [x] **3.7** Add error handling for `InvalidInputError` and `CalculationError`
+- [x] **3.8** Add frozen string literal and module namespacing
+- [x] **3.9** Run `bundle exec rubocop lib/pocket_knife/percentage_calculator_tool.rb`
+- [x] **3.10** Create unit test file: `spec/unit/percentage_calculator_tool_spec.rb`
+- [x] **3.11** Mock `RubyLLM::Tool` parent class appropriately
+- [x] **3.12** Write tests for successful execution and error cases
+- [x] **3.13** Run tests: `bundle exec rspec spec/unit/percentage_calculator_tool_spec.rb`
+- [x] **3.14** Verify 100% coverage for this file
 
 ### Phase 4: Documentation & Integration (60 minutes)
 
-- [ ] **4.1** Add new files to `lib/pocket_knife.rb` requires (conditional loading notes)
-- [ ] **4.2** Update README with "Optional LLM Features" section
-- [ ] **4.3** Document environment variable setup (OpenAI & Anthropic)
-- [ ] **4.4** Add installation instructions for both modes
-- [ ] **4.5** Add provider priority documentation
-- [ ] **4.6** Run full test suite: `bundle exec rake test`
-- [ ] **4.7** Verify all existing tests still pass
-- [ ] **4.8** Check test coverage: `COVERAGE=true bundle exec rspec`
-- [ ] **4.9** Verify coverage remains 90%+ overall
-- [ ] **4.10** Run rubocop on entire project: `bundle exec rubocop`
+- [x] **4.1** Add new files to `lib/pocket_knife.rb` requires (conditional loading notes)
+- [x] **4.2** Update README with "Optional LLM Features" section
+- [x] **4.3** Document environment variable setup (OpenAI & Anthropic)
+- [x] **4.4** Add installation instructions for both modes
+- [x] **4.5** Add provider priority documentation
+- [x] **4.6** Run full test suite: `bundle exec rake test`
+- [x] **4.7** Verify all existing tests still pass
+- [x] **4.8** Check test coverage: `COVERAGE=true bundle exec rspec`
+- [x] **4.9** Verify coverage remains 90%+ overall
+- [x] **4.10** Run rubocop on entire project: `bundle exec rubocop`
 
 ### Phase 5: Final Verification (30 minutes)
 
-- [ ] **5.1** Test calc command still works: `bundle exec bin/pocket-knife calc 100 20`
-- [ ] **5.2** Verify no LLM code loaded when running calc (check startup time)
-- [ ] **5.3** Test with and without `--with llm` bundle installation
-- [ ] **5.4** Verify graceful degradation when RubyLLM missing
-- [ ] **5.5** Review all acceptance criteria marked complete
-- [ ] **5.6** Git commit with message: "feat: Add RubyLLM integration foundation (Story LLM-1)"
+- [x] **5.1** Test calc command still works: `bundle exec bin/pocket-knife calc 100 20`
+- [x] **5.2** Verify no LLM code loaded when running calc (check startup time)
+- [x] **5.3** Test with and without `--with llm` bundle installation
+- [x] **5.4** Verify graceful degradation when RubyLLM missing
+- [x] **5.5** Review all acceptance criteria marked complete
+- [x] **5.6** Git commit with message: "feat: Add RubyLLM integration foundation (Story LLM-1)"
 
 ---
 
