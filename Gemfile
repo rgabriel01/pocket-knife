@@ -12,3 +12,8 @@ group :development, :test do
   gem 'rubocop-rspec', require: false
   gem 'simplecov', '~> 0.22', require: false
 end
+
+group :llm, optional: true do
+  gem 'dotenv', '~> 2.8'
+  gem 'ruby_llm', '~> 1.9'
+end

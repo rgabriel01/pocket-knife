@@ -37,3 +37,7 @@ coverage/
 
 # Vendor
 vendor/bundle/
+
+# Environment variables
+.env
+.env.local

@@ -101,13 +101,13 @@ RSpec.describe PocketKnife::CLI do
     context 'with help flag' do
       it 'displays help with --help flag' do
         expect { described_class.run(['--help']) }
-          .to output(/Usage: pocket-knife calc/).to_stdout
+          .to output(/Usage:.*pocket-knife calc.*pocket-knife ask/m).to_stdout
           .and raise_error(SystemExit) { |error| expect(error.status).to eq(0) }
       end
 
       it 'displays help with -h flag' do
         expect { described_class.run(['-h']) }
-          .to output(/Usage: pocket-knife calc/).to_stdout
+          .to output(/Usage:.*pocket-knife calc.*pocket-knife ask/m).to_stdout
           .and raise_error(SystemExit) { |error| expect(error.status).to eq(0) }
       end
     end

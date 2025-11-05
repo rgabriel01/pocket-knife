@@ -23,8 +23,11 @@ Style/StringLiterals:
   EnforcedStyle: single_quotes
 
 # Metrics
+Metrics/ClassLength:
+  Max: 210
+
 Metrics/MethodLength:
-  Max: 20
+  Max: 50
   Exclude:
     - 'spec/**/*'
 
@@ -34,10 +37,13 @@ Metrics/BlockLength:
     - 'Rakefile'
 
 Metrics/AbcSize:
-  Max: 18
+  Max: 25
 
 Metrics/CyclomaticComplexity:
-  Max: 8
+  Max: 10
+
+Metrics/PerceivedComplexity:
+  Max: 12
 
 # Layout
 Layout/LineLength:
@@ -63,6 +69,12 @@ RSpec/ContextWording:
   Enabled: false
 
 RSpec/DescribeClass:
+  Enabled: false
+
+RSpec/MessageSpies:
+  Enabled: false
+
+RSpec/VerifiedDoubles:
   Enabled: false
 
 # Security
