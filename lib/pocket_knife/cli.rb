@@ -221,7 +221,7 @@ module PocketKnife
 
       # Send query and get response
       response = chat.ask(query)
-      response.content.text.strip
+      response.content.strip
     end
 
     # Handle LLM API errors with specific messages
