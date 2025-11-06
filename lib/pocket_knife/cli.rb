@@ -6,6 +6,7 @@ module PocketKnife
   # @example Run the CLI
   #   CLI.run(['calc', '100', '20'])
   #   # Outputs: 20.00
+  # rubocop:disable Metrics/ClassLength
   class CLI
     # Run the CLI with provided arguments
     #
@@ -37,6 +38,36 @@ module PocketKnife
       # Early routing: handle 'ask' subcommand
       if @args[0] == 'ask'
         execute_ask
+        return
+      end
+
+      # Early routing: handle 'store-product' subcommand
+      if @args[0] == 'store-product'
+        execute_store_product
+        return
+      end
+
+      # Early routing: handle 'list-products' subcommand
+      if @args[0] == 'list-products'
+        execute_list_products
+        return
+      end
+
+      # Early routing: handle 'get-product' subcommand
+      if @args[0] == 'get-product'
+        execute_get_product
+        return
+      end
+
+      # Early routing: handle 'update-product' subcommand
+      if @args[0] == 'update-product'
+        execute_update_product
+        return
+      end
+
+      # Early routing: handle 'delete-product' subcommand
+      if @args[0] == 'delete-product'
+        execute_delete_product
         return
       end
 
@@ -278,19 +309,30 @@ module PocketKnife
     # Display help text
     #
     # @return [void]
+    # rubocop:disable Metrics/MethodLength
     def display_help
       puts <<~HELP
-        Pocket Knife - Command-line percentage calculator
+        Pocket Knife - Command-line percentage calculator & product storage
 
         Calculate percentages quickly without leaving your terminal.
 
         Usage:
           pocket-knife calc <amount> <percentage>
           pocket-knife ask "<natural language query>"
+          pocket-knife store-product "<name>" <price>
+          pocket-knife list-products
+          pocket-knife get-product "<name>"
+          pocket-knife update-product "<name>" <new_price>
+          pocket-knife delete-product "<name>"
 
         Commands:
-          calc        - Calculate percentage with exact numbers
-          ask         - Ask percentage questions in natural language (requires LLM setup)
+          calc           - Calculate percentage with exact numbers
+          ask            - Ask percentage questions in natural language (requires LLM setup)
+          store-product  - Store a product with name and price (requires storage setup)
+          list-products  - List all stored products in a table (requires storage setup)
+          get-product    - Get details of a specific product (requires storage setup)
+          update-product - Update the price of an existing product (requires storage setup)
+          delete-product - Delete a product from storage (requires storage setup)
 
         Calc Examples:
           pocket-knife calc 200 15
@@ -307,21 +349,395 @@ module PocketKnife
           pocket-knife ask "Calculate 15 percent of 200"
           pocket-knife ask "How much is a 20% tip on $45.50?"
 
+        Store Product Examples:
+          pocket-knife store-product "Coffee" 12.99
+          pocket-knife store-product "Banana" 200.00
+          pocket-knife store-product "Milk" 3.50
+
+        List Products Example:
+          pocket-knife list-products
+          # ID  Name      Price
+          # --  ----      -----
+          # 1   Coffee    $12.99
+          # 2   Banana    $200.00
+          # 3   Milk      $3.50
+
+        Get Product Examples:
+          pocket-knife get-product "Coffee"
+          # Product: Coffee
+          # Price: $12.99
+          # ID: 1
+          # Created: 2025-11-06 14:30:22
+
+          pocket-knife get-product "MILK"
+          # (case-insensitive lookup)
+
+        Update Product Examples:
+          pocket-knife update-product "Coffee" 15.99
+          # ✓ Product price updated
+          #   Product:   Coffee
+          #   Old Price: $12.99
+          #   New Price: $15.99
+
+          pocket-knife update-product "BANANA" 180.00
+          # (case-insensitive lookup)
+
+        Delete Product Examples:
+          pocket-knife delete-product "Coffee"
+          # Delete product 'Coffee' ($12.99)?
+          # Are you sure? (y/n): y
+          # ✓ Product deleted successfully
+          #   Name:  Coffee
+          #   Price: $12.99
+
         Calc Arguments:
           amount      - Any numeric value (integer or decimal)
           percentage  - Whole number only (e.g., 15 for 15%)
+
+        Store Product Arguments:
+          name        - Product name (use quotes if it contains spaces)
+          price       - Positive numeric value (integer or decimal)
+
+        Update Product Arguments:
+          name        - Existing product name (case-insensitive)
+          new_price   - New price (positive numeric value)
+
+        Delete Product Arguments:
+          name        - Existing product name (case-insensitive)
 
         Options:
           --help, -h  - Show this help message
 
         Note: 'calc' percentages should be whole numbers without the % symbol.
               Results are displayed with exactly 2 decimal places.
+              Delete operations require confirmation.
 
         LLM Setup (for 'ask' command):
           1. Install: bundle install --with llm
           2. Configure: Set GEMINI_API_KEY in .env file
           3. Get key: https://makersuite.google.com/app/apikey
+
+        Storage Setup (for product commands):
+          1. Install: bundle install --with storage
+          2. Database location: ~/.pocket-knife/products.db
       HELP
     end
+    # rubocop:enable Metrics/MethodLength
+
+    def execute_store_product
+      # Check if storage is available
+      unless storage_available?
+        handle_storage_unavailable
+        exit 1
+      end
+
+      # Parse arguments: store-product "<name>" <price>
+      name = @args[1]
+      price = @args[2]
+
+      # Validate arguments
+      if name.nil? || name.strip.empty?
+        warn_with_fallback(
+          'Missing product name',
+          'Usage: pocket-knife store-product "<name>" <price>',
+          '',
+          'Examples:',
+          '  pocket-knife store-product "Coffee" 12.99',
+          '  pocket-knife store-product "Milk" 3.50'
+        )
+        exit 1
+      end
+
+      if price.nil?
+        warn_with_fallback(
+          'Missing price argument',
+          'Usage: pocket-knife store-product "<name>" <price>',
+          '',
+          'Examples:',
+          '  pocket-knife store-product "Coffee" 12.99',
+          '  pocket-knife store-product "Milk" 3.50'
+        )
+        exit 1
+      end
+
+      # Load storage classes
+      require_relative 'storage/product'
+
+      # Check if product already exists
+      if PocketKnife::Storage::Product.exists?(name)
+        warn_with_fallback(
+          "Product \"#{name}\" already exists",
+          'Use a different name or update the existing product.'
+        )
+        exit 1
+      end
+
+      # Create the product
+      product = PocketKnife::Storage::Product.create(name, price)
+
+      # Success output
+      puts ''
+      puts '✓ Product stored successfully'
+      puts "  Name:  #{product.name}"
+      puts "  Price: #{product.formatted_price}"
+      puts "  ID:    #{product.id}"
+      puts ''
+    rescue InvalidInputError => e
+      warn_with_fallback(e.message)
+      exit 2
+    rescue SQLite3::ConstraintException
+      warn_with_fallback(
+        "Product \"#{name}\" already exists",
+        'Use a different name or update the existing product.'
+      )
+      exit 1
+    rescue StandardError => e
+      warn_with_fallback(
+        'An unexpected error occurred while storing the product',
+        "Details: #{e.message}"
+      )
+      exit 2
+    end
+
+    def execute_list_products
+      # Check if storage is available
+      unless storage_available?
+        handle_storage_unavailable
+        exit 1
+      end
+
+      # Load storage classes
+      require_relative 'storage/product'
+
+      # Retrieve all products
+      products = PocketKnife::Storage::Product.all
+
+      # Handle empty list
+      if products.empty?
+        puts 'No products stored yet.'
+        return
+      end
+
+      # Display table header
+      puts 'ID   Name                 Price'
+      puts '--   ----                 -----'
+
+      # Display each product
+      products.each do |product|
+        puts format(
+          '%-4<id>d %-20<name>s %<price>s',
+          id: product.id,
+          name: product.name,
+          price: product.formatted_price
+        )
+      end
+    rescue StandardError => e
+      warn_with_fallback(
+        'An unexpected error occurred while listing products',
+        "Details: #{e.message}"
+      )
+      exit 1
+    end
+
+    def execute_get_product
+      # Check if storage is available
+      unless storage_available?
+        handle_storage_unavailable
+        exit 1
+      end
+
+      # Parse arguments: get-product "<name>"
+      name = @args[1]
+
+      # Validate arguments
+      if name.nil? || name.strip.empty?
+        warn_with_fallback(
+          'Product name required',
+          'Usage: pocket-knife get-product "<name>"',
+          '',
+          'Examples:',
+          '  pocket-knife get-product "Coffee"',
+          '  pocket-knife get-product "Laptop"'
+        )
+        exit 1
+      end
+
+      # Load storage classes
+      require_relative 'storage/product'
+
+      # Find the product
+      product = PocketKnife::Storage::Product.find_by_name(name)
+
+      # Handle not found
+      if product.nil?
+        warn_with_fallback("Product '#{name}' not found")
+        exit 1
+      end
+
+      # Display product details
+      puts "Product: #{product.name}"
+      puts "Price: #{product.formatted_price}"
+      puts "ID: #{product.id}"
+      puts "Created: #{product.created_at}"
+    rescue StandardError => e
+      warn_with_fallback(
+        'An unexpected error occurred while retrieving the product',
+        "Details: #{e.message}"
+      )
+      exit 1
+    end
+
+    def execute_update_product
+      # Check if storage is available
+      unless storage_available?
+        handle_storage_unavailable
+        exit 1
+      end
+
+      # Parse arguments: update-product "<name>" <new_price>
+      name = @args[1]
+      new_price = @args[2]
+
+      # Validate arguments
+      if name.nil? || name.strip.empty?
+        warn_with_fallback(
+          'Product name required',
+          'Usage: pocket-knife update-product "<name>" <new_price>',
+          '',
+          'Examples:',
+          '  pocket-knife update-product "Coffee" 15.99',
+          '  pocket-knife update-product "Laptop" 899.00'
+        )
+        exit 1
+      end
+
+      if new_price.nil?
+        warn_with_fallback(
+          'New price required',
+          'Usage: pocket-knife update-product "<name>" <new_price>',
+          '',
+          'Examples:',
+          '  pocket-knife update-product "Coffee" 15.99',
+          '  pocket-knife update-product "Laptop" 899.00'
+        )
+        exit 1
+      end
+
+      # Load storage classes
+      require_relative 'storage/product'
+
+      # Get old price first
+      product = PocketKnife::Storage::Product.find_by_name(name)
+      if product.nil?
+        warn_with_fallback("Product '#{name}' not found")
+        exit 1
+      end
+
+      old_price = product.formatted_price
+
+      # Update price
+      updated_product = PocketKnife::Storage::Product.update_price(name, new_price)
+
+      # Display confirmation
+      puts '✓ Product price updated'
+      puts "  Product:   #{updated_product.name}"
+      puts "  Old Price: #{old_price}"
+      puts "  New Price: #{updated_product.formatted_price}"
+    rescue ProductNotFoundError => e
+      warn_with_fallback(e.message)
+      exit 1
+    rescue InvalidInputError => e
+      warn_with_fallback(e.message)
+      exit 2
+    rescue StandardError => e
+      warn_with_fallback(
+        'An unexpected error occurred while updating the product',
+        "Details: #{e.message}"
+      )
+      exit 2
+    end
+
+    def execute_delete_product
+      # Check if storage is available
+      unless storage_available?
+        handle_storage_unavailable
+        exit 1
+      end
+
+      # Parse arguments: delete-product "<name>"
+      name = @args[1]
+
+      # Validate arguments
+      if name.nil? || name.strip.empty?
+        warn_with_fallback(
+          'Product name required',
+          'Usage: pocket-knife delete-product "<name>"',
+          '',
+          'Examples:',
+          '  pocket-knife delete-product "Coffee"',
+          '  pocket-knife delete-product "Laptop"'
+        )
+        exit 1
+      end
+
+      # Load storage classes
+      require_relative 'storage/product'
+
+      # Find the product
+      product = PocketKnife::Storage::Product.find_by_name(name)
+      if product.nil?
+        warn_with_fallback("Product '#{name}' not found")
+        exit 1
+      end
+
+      # Ask for confirmation
+      puts "Delete product '#{product.name}' (#{product.formatted_price})?"
+      print 'Are you sure? (y/n): '
+      response = $stdin.gets.chomp.downcase
+
+      unless %w[y yes].include?(response)
+        puts 'Deletion cancelled'
+        exit 0
+      end
+
+      # Delete the product
+      PocketKnife::Storage::Product.delete(name)
+
+      # Display confirmation
+      puts '✓ Product deleted successfully'
+      puts "  Name:  #{product.name}"
+      puts "  Price: #{product.formatted_price}"
+    rescue ProductNotFoundError => e
+      warn_with_fallback(e.message)
+      exit 1
+    rescue StandardError => e
+      warn_with_fallback(
+        'An unexpected error occurred while deleting the product',
+        "Details: #{e.message}"
+      )
+      exit 1
+    end
+
+    def storage_available?
+      require_relative 'storage/database'
+      PocketKnife::Storage::Database.storage_available?
+    rescue LoadError
+      false
+    end
+
+    def handle_storage_unavailable
+      warn_with_fallback(
+        'Storage features are not available',
+        'The sqlite3 gem is not installed.',
+        '',
+        'To enable storage features:',
+        '  1. Run: bundle install --with storage',
+        '  2. Try your command again',
+        '',
+        'For calculations without storage, use:',
+        '  pocket-knife calc <amount> <percentage>'
+      )
+    end
   end
+  # rubocop:enable Metrics/ClassLength
 end

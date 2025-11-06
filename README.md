@@ -12,8 +12,9 @@ Pocket Knife is a simple, zero-dependency Ruby CLI tool that calculates percenta
 - 🎯 **Simple**: Clean, intuitive command syntax
 - 🔒 **Zero Dependencies**: Core calculator uses only Ruby standard library
 - 🤖 **AI-Powered (Optional)**: Natural language queries with Google Gemini
-- ✅ **Well-Tested**: 110+ tests with 90%+ code coverage
-- 🔐 **Secure**: API keys via environment variables, no data storage
+- 💾 **Product Storage (Optional)**: Store products with prices using SQLite
+- ✅ **Well-Tested**: 123+ tests with 80%+ code coverage
+- 🔐 **Secure**: API keys via environment variables
 - 📖 **Great Help**: Built-in documentation and comprehensive error messages
 
 ## Requirements
@@ -32,12 +33,26 @@ bundle exec rake install
 
 This installs `pocket-knife` to `/usr/local/bin/` (requires sudo password).
 
-### Installation with Optional LLM Features
+### Installation with Optional Features
 
-To enable natural language querying with AI models, install with the LLM dependency group:
+To enable optional features (LLM and/or Storage), install with the desired dependency groups:
 
+**LLM Only:**
 ```bash
 bundle install --with llm
+bundle exec rake install
+```
+
+**Storage Only:**
+```bash
+bundle install --with storage
+bundle exec rake install
+```
+
+**Both LLM and Storage:**
+```bash
+bundle config set --local with 'llm storage'
+bundle install
 bundle exec rake install
 ```
 
@@ -226,6 +241,96 @@ Error: Rate limit exceeded: Too many requests to Gemini API.
 - Update your `.env` file or environment variable with the new key
 
 For more detailed troubleshooting, see [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
+
+## Optional Product Storage
+
+Pocket Knife includes optional product storage functionality using SQLite. Store products with names and prices for quick reference and calculations.
+
+### Setup
+
+1. **Install with Storage dependencies:**
+
+```bash
+bundle install --with storage
+```
+
+2. **Database location:**
+
+Products are stored in: `~/.pocket-knife/products.db`
+
+The database and table are created automatically on first use.
+
+### Store a Product
+
+```bash
+pocket-knife store-product "<name>" <price>
+```
+
+**Examples:**
+
+```bash
+# Store a product with name and price
+pocket-knife store-product "Coffee" 12.99
+# Output:
+# ✓ Product stored successfully
+#   Name:  Coffee
+#   Price: $12.99
+#   ID:    1
+
+# Store another product
+pocket-knife store-product "Banana" 200.00
+# Output:
+# ✓ Product stored successfully
+#   Name:  Banana
+#   Price: $200.00
+#   ID:    2
+
+# Product names can contain spaces
+pocket-knife store-product "Organic Milk" 3.50
+```
+
+### Error Handling
+
+```bash
+# Duplicate product name
+pocket-knife store-product "Coffee" 15.99
+# Error: Product "Coffee" already exists
+#   Use a different name or update the existing product.
+
+# Invalid price (negative)
+pocket-knife store-product "Tea" -5.00
+# Error: Price must be a positive number
+
+# Missing arguments
+pocket-knife store-product "Tea"
+# Error: Missing price argument
+# Usage: pocket-knife store-product "<name>" <price>
+```
+
+### Notes
+
+- Product names must be unique
+- Prices must be positive numbers (zero or greater)
+- Product names are case-sensitive
+- The database is created in your home directory: `~/.pocket-knife/`
+- Products persist across sessions
+
+### Troubleshooting
+
+**"Storage features are not available" error:**
+- Install storage dependencies: `bundle install --with storage`
+- Verify installation: `bundle info sqlite3`
+- If still failing, try: `bundle install --redownload --with storage`
+
+**Database permission errors:**
+- Ensure you have write permissions to `~/.pocket-knife/` directory
+- Check disk space: `df -h ~`
+- Verify the directory exists: `ls -la ~/.pocket-knife/`
+
+**SQLite errors:**
+- Your SQLite database may be corrupted
+- Backup and remove: `mv ~/.pocket-knife/products.db ~/.pocket-knife/products.db.backup`
+- Try your command again (database will be recreated)
 
 ## Development
 

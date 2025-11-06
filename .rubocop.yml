@@ -24,10 +24,10 @@ Style/StringLiterals:
 
 # Metrics
 Metrics/ClassLength:
-  Max: 210
+  Max: 300  # CLI class growing with new commands
 
 Metrics/MethodLength:
-  Max: 50
+  Max: 60  # Allow slightly longer methods for command handlers
   Exclude:
     - 'spec/**/*'
 
@@ -37,7 +37,7 @@ Metrics/BlockLength:
     - 'Rakefile'
 
 Metrics/AbcSize:
-  Max: 25
+  Max: 40  # Allow higher complexity for command handlers
 
 Metrics/CyclomaticComplexity:
   Max: 10
@@ -57,7 +57,7 @@ Naming/VariableNumber:
 
 # RSpec
 RSpec/ExampleLength:
-  Max: 10
+  Max: 15
 
 RSpec/MultipleExpectations:
   Max: 5

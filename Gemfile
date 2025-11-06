@@ -17,3 +17,7 @@ group :llm, optional: true do
   gem 'dotenv', '~> 2.8'
   gem 'ruby_llm', '~> 1.9'
 end
+
+group :storage, optional: true do
+  gem 'sqlite3', '~> 1.7'
+end

@@ -27,4 +27,10 @@ module PocketKnife
   # @example
   #   raise ConfigurationError, "Invalid configuration file"
   class ConfigurationError < PocketKnifeError; end
+
+  # Raised when a product is not found in storage (exit code 1)
+  #
+  # @example
+  #   raise ProductNotFoundError, "Product 'Coffee' not found"
+  class ProductNotFoundError < PocketKnifeError; end
 end
