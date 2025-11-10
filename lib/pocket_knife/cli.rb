@@ -41,6 +41,12 @@ module PocketKnife
         return
       end
 
+      # Early routing: handle 'ask-product' subcommand
+      if @args[0] == 'ask-product'
+        execute_ask_product
+        return
+      end
+
       # Early routing: handle 'store-product' subcommand
       if @args[0] == 'store-product'
         execute_store_product
@@ -215,6 +221,73 @@ module PocketKnife
       end
     end
 
+    # Execute the ask-product command for natural language product queries
+    #
+    # @return [void]
+    def execute_ask_product
+      # Validate RubyLLM availability
+      unless llm_available?
+        warn_with_fallback(
+          'LLM features not available. Install with: bundle install --with llm',
+          'For direct product commands, use: pocket-knife get-product <name>'
+        )
+        exit 1
+      end
+
+      # Validate Storage availability
+      unless storage_available?
+        warn_with_fallback(
+          'Storage features not available. Install with: bundle install --with storage',
+          'For calculator features, use: pocket-knife calc <amount> <percentage>'
+        )
+        exit 1
+      end
+
+      # Validate API key configuration
+      unless llm_configured?
+        warn_with_fallback(
+          'No API key configured. Set GEMINI_API_KEY in .env file or environment variable.',
+          'Get a free key at: https://makersuite.google.com/app/apikey',
+          'For direct product commands, use: pocket-knife get-product <name>'
+        )
+        exit 1
+      end
+
+      # Extract query from arguments
+      query = @args[1..].join(' ').strip
+
+      if query.empty?
+        warn_with_fallback(
+          'Missing query. Usage: pocket-knife ask-product "your question about products"',
+          'Examples:',
+          '  pocket-knife ask-product "Is there a product called banana?"',
+          '  pocket-knife ask-product "Show me products under $10"',
+          'For direct product commands, use: pocket-knife list-products'
+        )
+        exit 1
+      end
+
+      # Process query with LLM and ProductQueryTool
+      begin
+        response = process_product_query(query)
+        puts response
+      rescue Errno::ECONNREFUSED, SocketError => e
+        warn_with_fallback(
+          'Network error: Unable to connect to Gemini API.',
+          'Please check your internet connection and try again.',
+          'For offline product access, use: pocket-knife list-products',
+          "(Error: #{e.class})"
+        )
+        exit 1
+      rescue StandardError => e
+        warn_with_fallback(
+          "Unexpected error occurred: #{e.message}",
+          'For direct product commands, use: pocket-knife list-products'
+        )
+        exit 1
+      end
+    end
+
     # Check if LLM features are available
     #
     # @return [Boolean]
@@ -255,7 +328,27 @@ module PocketKnife
       response.content.strip
     end
 
-    # Handle LLM API errors with specific messages
+    # Process natural language product query with LLM and ProductQueryTool
+    #
+    # @param query [String] The natural language query about products
+    # @return [String] The formatted response from ProductQueryTool
+    def process_product_query(query)
+      require_relative 'llm_config'
+      require_relative 'product_query_tool'
+
+      # Configure RubyLLM
+      LLMConfig.configure!
+
+      # Create chat with ProductQueryTool using Gemini provider
+      tool = ProductQueryTool.new
+      chat = RubyLLM.chat(provider: :gemini, model: 'gemini-2.0-flash-exp').with_tools(tool)
+
+      # Send query and get response
+      response = chat.ask(query)
+      response.content.strip
+    end
+
+    # Execute the store-product command    # Handle LLM API errors with specific messages
     #
     # @param error [StandardError] The error to handle
     # @return [void]
@@ -319,6 +412,7 @@ module PocketKnife
         Usage:
           pocket-knife calc <amount> <percentage>
           pocket-knife ask "<natural language query>"
+          pocket-knife ask-product "<query>"
           pocket-knife store-product "<name>" <price>
           pocket-knife list-products
           pocket-knife get-product "<name>"
@@ -328,6 +422,7 @@ module PocketKnife
         Commands:
           calc           - Calculate percentage with exact numbers
           ask            - Ask percentage questions in natural language (requires LLM setup)
+          ask-product    - Query products with natural language (requires LLM + storage setup)
           store-product  - Store a product with name and price (requires storage setup)
           list-products  - List all stored products in a table (requires storage setup)
           get-product    - Get details of a specific product (requires storage setup)
@@ -348,6 +443,12 @@ module PocketKnife
           pocket-knife ask "What is 20% of 100?"
           pocket-knife ask "Calculate 15 percent of 200"
           pocket-knife ask "How much is a 20% tip on $45.50?"
+
+        Ask Product Examples:
+          pocket-knife ask-product "Is there a product called banana?"
+          pocket-knife ask-product "Show me products under $10"
+          pocket-knife ask-product "Products between $5 and $15"
+          pocket-knife ask-product "List all products"
 
         Store Product Examples:
           pocket-knife store-product "Coffee" 12.99

@@ -156,4 +156,78 @@ RSpec.describe 'pocket-knife executable' do
       end
     end
   end
+
+  describe 'ask-product command' do
+    context 'help text includes ask-product command' do
+      it 'shows ask-product in help output' do
+        output = `#{bin_path} --help`
+        expect(output).to include('ask-product')
+        expect(output).to include('Query products with natural language')
+        expect($CHILD_STATUS.exitstatus).to eq(0)
+      end
+    end
+
+    context 'when LLM features not installed' do
+      it 'exits with code 1 and helpful error message' do
+        output = `#{bin_path} ask-product "Show me all products" 2>&1`
+        if output.include?('LLM features not available')
+          expect(output).to include('LLM features not available')
+          expect(output).to include('bundle install --with llm')
+          expect(output).to include('pocket-knife get-product')
+          expect($CHILD_STATUS.exitstatus).to eq(1)
+        else
+          skip 'LLM features are available, skipping unavailable test'
+        end
+      end
+    end
+
+    context 'when Storage features not installed' do
+      it 'exits with code 1 and helpful error message' do
+        output = `#{bin_path} ask-product "Show me all products" 2>&1`
+        if output.include?('Storage features not available')
+          expect(output).to include('Storage features not available')
+          expect(output).to include('bundle install --with storage')
+          expect(output).to include('pocket-knife calc')
+          expect($CHILD_STATUS.exitstatus).to eq(1)
+        else
+          skip 'Storage features are available or LLM check failed first'
+        end
+      end
+    end
+
+    context 'when API key not configured' do
+      it 'exits with code 1 and helpful error message' do
+        output = `GEMINI_API_KEY= #{bin_path} ask-product "Show me all products" 2>&1`
+        if output.include?('No API key configured')
+          expect(output).to include('No API key configured')
+          expect(output).to include('GEMINI_API_KEY')
+          expect(output).to include('makersuite.google.com')
+          expect(output).to include('pocket-knife get-product')
+          expect($CHILD_STATUS.exitstatus).to eq(1)
+        else
+          skip 'LLM or Storage features not available or other setup issue'
+        end
+      end
+    end
+
+    context 'when query is missing' do
+      it 'exits with code 1 and helpful error message' do
+        output = `GEMINI_API_KEY=test-key #{bin_path} ask-product 2>&1`
+        expect(output).to include('Missing query')
+        expect(output).to include('pocket-knife ask-product')
+        expect(output).to include('Is there a product called banana')
+        expect(output).to include('pocket-knife list-products')
+        expect($CHILD_STATUS.exitstatus).to eq(1)
+      end
+    end
+
+    context 'when query is empty after trimming' do
+      it 'exits with code 1 and helpful error message' do
+        output = `GEMINI_API_KEY=test-key #{bin_path} ask-product "   " 2>&1`
+        expect(output).to include('Missing query')
+        expect(output).to include('pocket-knife ask-product')
+        expect($CHILD_STATUS.exitstatus).to eq(1)
+      end
+    end
+  end
 end

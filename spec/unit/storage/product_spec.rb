@@ -409,4 +409,285 @@ RSpec.describe PocketKnife::Storage::Product do
       expect(product.price).to be_a(Float)
     end
   end
+
+  describe '.filter_by_max_price' do
+    before do
+      described_class.create('Apple', 1.50)
+      described_class.create('Banana', 1.99)
+      described_class.create('Orange', 2.99)
+      described_class.create('Grape', 4.99)
+      described_class.create('Mango', 3.50)
+    end
+
+    context 'with products under max price' do
+      it 'returns products priced at or below max price' do
+        products = described_class.filter_by_max_price(3.00)
+
+        expect(products.length).to eq(3)
+        expect(products.map(&:name)).to contain_exactly('Apple', 'Banana', 'Orange')
+      end
+
+      it 'includes products exactly at max price boundary' do
+        products = described_class.filter_by_max_price(2.99)
+
+        expect(products.map(&:name)).to include('Orange')
+        expect(products.length).to eq(3)
+      end
+
+      it 'orders results by price ascending' do
+        products = described_class.filter_by_max_price(5.00)
+
+        prices = products.map(&:price)
+        expect(prices).to eq(prices.sort)
+      end
+
+      it 'orders by name when prices are equal' do
+        described_class.create('Zucchini', 1.50)
+        products = described_class.filter_by_max_price(2.00)
+
+        same_price_products = products.select { |p| (p.price - 1.50).abs < 0.01 }
+        names = same_price_products.map(&:name)
+        expect(names).to eq(%w[Apple Zucchini])
+      end
+    end
+
+    context 'with no products under max price' do
+      it 'returns empty array when max price is too low' do
+        products = described_class.filter_by_max_price(0.50)
+
+        expect(products).to eq([])
+      end
+    end
+
+    context 'with empty database' do
+      it 'returns empty array' do
+        # Delete all products first
+        described_class.all.each { |p| described_class.delete(p.name) }
+        products = described_class.filter_by_max_price(10.00)
+
+        expect(products).to eq([])
+      end
+    end
+
+    context 'with various numeric types' do
+      it 'accepts integer max_price' do
+        products = described_class.filter_by_max_price(3)
+
+        expect(products.length).to eq(3)
+      end
+
+      it 'accepts float max_price' do
+        products = described_class.filter_by_max_price(3.0)
+
+        expect(products.length).to eq(3)
+      end
+
+      it 'accepts string numeric max_price' do
+        products = described_class.filter_by_max_price('3.0')
+
+        expect(products.length).to eq(3)
+      end
+    end
+
+    context 'with invalid max_price' do
+      it 'raises error for negative max_price' do
+        expect do
+          described_class.filter_by_max_price(-5.0)
+        end.to raise_error(PocketKnife::InvalidInputError, 'max_price must be non-negative')
+      end
+
+      it 'raises error for non-numeric max_price' do
+        expect do
+          described_class.filter_by_max_price('invalid')
+        end.to raise_error(PocketKnife::InvalidInputError, 'max_price must be a numeric value')
+      end
+
+      it 'raises error for nil max_price' do
+        expect do
+          described_class.filter_by_max_price(nil)
+        end.to raise_error(PocketKnife::InvalidInputError, 'max_price must be a numeric value')
+      end
+    end
+  end
+
+  describe '.filter_by_price_range' do
+    before do
+      described_class.create('Apple', 1.50)
+      described_class.create('Banana', 1.99)
+      described_class.create('Orange', 2.99)
+      described_class.create('Grape', 4.99)
+      described_class.create('Mango', 3.50)
+    end
+
+    context 'with products in range' do
+      it 'returns products within price range' do
+        products = described_class.filter_by_price_range(2.00, 4.00)
+
+        expect(products.length).to eq(2)
+        expect(products.map(&:name)).to contain_exactly('Orange', 'Mango')
+      end
+
+      it 'includes products at min boundary (inclusive)' do
+        products = described_class.filter_by_price_range(1.99, 3.00)
+
+        expect(products.map(&:name)).to include('Banana')
+      end
+
+      it 'includes products at max boundary (inclusive)' do
+        products = described_class.filter_by_price_range(2.00, 2.99)
+
+        expect(products.map(&:name)).to include('Orange')
+      end
+
+      it 'orders results by price ascending' do
+        products = described_class.filter_by_price_range(1.00, 5.00)
+
+        prices = products.map(&:price)
+        expect(prices).to eq(prices.sort)
+      end
+
+      it 'orders by name when prices are equal' do
+        described_class.create('Zucchini', 1.50)
+        products = described_class.filter_by_price_range(1.00, 2.00)
+
+        same_price_products = products.select { |p| (p.price - 1.50).abs < 0.01 }
+        names = same_price_products.map(&:name)
+        expect(names).to eq(%w[Apple Zucchini])
+      end
+    end
+
+    context 'with no products in range' do
+      it 'returns empty array when range is too high' do
+        products = described_class.filter_by_price_range(10.00, 20.00)
+
+        expect(products).to eq([])
+      end
+
+      it 'returns empty array when range is too low' do
+        products = described_class.filter_by_price_range(0.10, 0.50)
+
+        expect(products).to eq([])
+      end
+    end
+
+    context 'with empty database' do
+      it 'returns empty array' do
+        # Delete all products first
+        described_class.all.each { |p| described_class.delete(p.name) }
+        products = described_class.filter_by_price_range(1.00, 10.00)
+
+        expect(products).to eq([])
+      end
+    end
+
+    context 'with various numeric types' do
+      it 'accepts integer prices' do
+        products = described_class.filter_by_price_range(2, 4)
+
+        expect(products.length).to eq(2)
+      end
+
+      it 'accepts float prices' do
+        products = described_class.filter_by_price_range(2.0, 4.0)
+
+        expect(products.length).to eq(2)
+      end
+
+      it 'accepts string numeric prices' do
+        products = described_class.filter_by_price_range('2.0', '4.0')
+
+        expect(products.length).to eq(2)
+      end
+    end
+
+    context 'with invalid inputs' do
+      it 'raises error when min_price > max_price' do
+        expect do
+          described_class.filter_by_price_range(5.00, 2.00)
+        end.to raise_error(PocketKnife::InvalidInputError, 'min_price cannot be greater than max_price')
+      end
+
+      it 'raises error for negative min_price' do
+        expect do
+          described_class.filter_by_price_range(-1.00, 5.00)
+        end.to raise_error(PocketKnife::InvalidInputError, 'min_price must be non-negative')
+      end
+
+      it 'raises error for negative max_price' do
+        expect do
+          described_class.filter_by_price_range(1.00, -5.00)
+        end.to raise_error(PocketKnife::InvalidInputError, 'max_price must be non-negative')
+      end
+
+      it 'raises error for non-numeric min_price' do
+        expect do
+          described_class.filter_by_price_range('invalid', 5.00)
+        end.to raise_error(PocketKnife::InvalidInputError, 'min_price must be a numeric value')
+      end
+
+      it 'raises error for non-numeric max_price' do
+        expect do
+          described_class.filter_by_price_range(1.00, 'invalid')
+        end.to raise_error(PocketKnife::InvalidInputError, 'max_price must be a numeric value')
+      end
+
+      it 'raises error for nil min_price' do
+        expect do
+          described_class.filter_by_price_range(nil, 5.00)
+        end.to raise_error(PocketKnife::InvalidInputError, 'min_price must be a numeric value')
+      end
+
+      it 'raises error for nil max_price' do
+        expect do
+          described_class.filter_by_price_range(1.00, nil)
+        end.to raise_error(PocketKnife::InvalidInputError, 'max_price must be a numeric value')
+      end
+    end
+  end
+
+  describe '.count' do
+    context 'with products in database' do
+      it 'returns correct count' do
+        described_class.create('Apple', 1.50)
+        described_class.create('Banana', 1.99)
+        described_class.create('Orange', 2.99)
+
+        expect(described_class.count).to eq(3)
+      end
+
+      it 'updates count after adding products' do
+        expect(described_class.count).to eq(0)
+
+        described_class.create('Apple', 1.50)
+        expect(described_class.count).to eq(1)
+
+        described_class.create('Banana', 1.99)
+        expect(described_class.count).to eq(2)
+      end
+
+      it 'updates count after deleting products' do
+        described_class.create('Apple', 1.50)
+        described_class.create('Banana', 1.99)
+        expect(described_class.count).to eq(2)
+
+        described_class.delete('Apple')
+        expect(described_class.count).to eq(1)
+      end
+    end
+
+    context 'with empty database' do
+      it 'returns 0' do
+        expect(described_class.count).to eq(0)
+      end
+    end
+
+    context 'return type' do
+      it 'returns an integer' do
+        described_class.create('Apple', 1.50)
+
+        count = described_class.count
+        expect(count).to be_a(Integer)
+      end
+    end
+  end
 end

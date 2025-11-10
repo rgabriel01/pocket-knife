@@ -89,6 +89,49 @@ module PocketKnife
           product
         end
 
+        def filter_by_max_price(max_price)
+          max_f = validate_numeric_price!(max_price, 'max_price')
+
+          rows = Database.connection.execute(
+            'SELECT * FROM products WHERE price <= ? ORDER BY price ASC, name ASC',
+            [max_f]
+          )
+
+          rows.map do |row|
+            new(
+              id: row['id'],
+              name: row['name'],
+              price: row['price'],
+              created_at: row['created_at'],
+              updated_at: row['updated_at']
+            )
+          end
+        end
+
+        def filter_by_price_range(min_price, max_price)
+          min_f, max_f = validate_price_range!(min_price, max_price)
+
+          rows = Database.connection.execute(
+            'SELECT * FROM products WHERE price BETWEEN ? AND ? ORDER BY price ASC, name ASC',
+            [min_f, max_f]
+          )
+
+          rows.map do |row|
+            new(
+              id: row['id'],
+              name: row['name'],
+              price: row['price'],
+              created_at: row['created_at'],
+              updated_at: row['updated_at']
+            )
+          end
+        end
+
+        def count
+          result = Database.connection.get_first_row('SELECT COUNT(*) as count FROM products')
+          result['count'].to_i
+        end
+
         private
 
         def validate_name!(name)
@@ -100,6 +143,24 @@ module PocketKnife
           raise InvalidInputError, 'Price must be a positive number' if price_f.negative?
         rescue ArgumentError, TypeError
           raise InvalidInputError, 'Price must be a valid number'
+        end
+
+        def validate_numeric_price!(price, param_name = 'price')
+          price_f = Float(price)
+          raise InvalidInputError, "#{param_name} must be non-negative" if price_f.negative?
+
+          price_f
+        rescue ArgumentError, TypeError
+          raise InvalidInputError, "#{param_name} must be a numeric value"
+        end
+
+        def validate_price_range!(min_price, max_price)
+          min_f = validate_numeric_price!(min_price, 'min_price')
+          max_f = validate_numeric_price!(max_price, 'max_price')
+
+          raise InvalidInputError, 'min_price cannot be greater than max_price' if min_f > max_f
+
+          [min_f, max_f]
         end
       end
 

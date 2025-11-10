@@ -25,6 +25,7 @@ Pocket Knife addresses this gap by providing a purpose-built, terminal-native pe
 | 2025-11-04 | 0.1 | Initial PRD creation from Project Brief | PM (John) |
 | 2025-11-05 | 0.2 | Added LLM Integration Epic (Epic 2) - Natural language interface | PM (John) |
 | 2025-11-06 | 0.3 | Added Product Storage Epic (Epic 3) - SQLite-based product storage | PM (John) |
+| 2025-11-10 | 0.4 | Added Natural Language Product Query Epic (Epic 4) - ask-product command | PM (John) |
 
 ## Requirements
 
@@ -52,23 +53,47 @@ Pocket Knife addresses this gap by providing a purpose-built, terminal-native pe
 
 **FR11:** The system shall exit with a non-zero code on error conditions
 
+**FR12:** (Epic 4) The system shall accept a command in the format `pocket-knife ask-product "<query>"` where query is a natural language question about products
+
+**FR13:** (Epic 4) The system shall interpret natural language queries and execute appropriate product database operations using LLM
+
+**FR14:** (Epic 4) The system shall support product existence queries (e.g., "Is there a product called banana?")
+
+**FR15:** (Epic 4) The system shall support product listing queries (e.g., "Show me all products")
+
+**FR16:** (Epic 4) The system shall support price filtering queries (e.g., "Products under $10")
+
+**FR17:** (Epic 4) The system shall support price range queries (e.g., "Products between $5 and $15")
+
+**FR18:** (Epic 4) The system shall validate that both LLM and Storage features are installed before executing ask-product command
+
+**FR19:** (Epic 4) The system shall validate that GEMINI_API_KEY is configured before executing ask-product command
+
+**FR20:** (Epic 4) The system shall return formatted, human-readable responses for all product queries
+
+**FR21:** (Epic 4) The system shall execute product queries in under 2 seconds (including LLM API call time)
+
 ### Non Functional
 
 **NFR1:** The tool must be installable via Rake on systems with Ruby 3.2+ installed
 
-**NFR2:** The codebase shall maintain 90% or greater test coverage with RSpec
+**NFR2:** The codebase shall maintain 80% or greater test coverage with RSpec (adjusted from 90% due to optional features)
 
 **NFR3:** All tests must pass before any release
 
 **NFR4:** Error messages shall be clear, actionable, and guide users toward correct usage
 
-**NFR5:** The tool shall have zero external gem dependencies beyond development/testing gems (RSpec, RuboCop)
+**NFR5:** The tool core shall have zero external gem dependencies; optional features (LLM, Storage) may require additional gems in separate bundle groups
 
 **NFR6:** Code shall follow Ruby community style guidelines as enforced by RuboCop
 
 **NFR7:** The tool shall run on macOS and Linux without modification
 
 **NFR8:** Input validation shall prevent code injection or unsafe operations
+
+**NFR9:** (Epic 4) All SQL queries in Product model extensions shall use parameterized statements to prevent SQL injection
+
+**NFR10:** (Epic 4) The ask-product feature shall degrade gracefully when dependencies are missing, providing clear installation instructions
 
 ## User Interface Design Goals
 
@@ -528,5 +553,117 @@ so that I can quickly compute discounts, markups, or tax on my products.
 9. All existing tests still passing
 10. README.md updated with calc-product examples
 11. Help text includes calc-product usage
+
+---
+
+## Epic 4: Natural Language Product Query Interface
+
+**Epic Goal:** Enable users to query product information using natural language by adding an `ask-product` command that leverages RubyLLM to interpret queries and execute local product database operations, providing an intuitive alternative to direct CLI commands.
+
+**Status:** 📋 PLANNED
+- ⏳ Story 4.1: Product Query Tool with LLM Function Definitions - PLANNED
+- ⏳ Story 4.2: Extend Product Model with Query Methods - PLANNED
+- ⏳ Story 4.3: Implement ask-product CLI Command - PLANNED
+
+**Epic Details:** See `docs/epic-product-query.md` for complete epic documentation.
+
+**User Stories:** See `docs/stories/4.1.story.md`, `docs/stories/4.2.story.md`, `docs/stories/4.3.story.md` for detailed specifications.
+
+### Story 4.1: Product Query Tool with LLM Function Definitions
+
+As a developer,
+I want a ProductQueryTool that defines product database operations as RubyLLM function tools,
+so that the LLM can interpret natural language queries and execute appropriate product database operations.
+
+**Acceptance Criteria:**
+
+1. ProductQueryTool class created inheriting from RubyLLM::Tool
+2. Function tool: `find_product_by_name` - Search by exact name
+3. Function tool: `list_all_products` - Get all products
+4. Function tool: `filter_products_by_max_price` - Products under a price
+5. Function tool: `filter_products_by_price_range` - Products between two prices
+6. Response formatting is consistent and user-friendly
+7. Input validation prevents invalid queries
+8. Comprehensive error handling
+9. 100% test coverage for ProductQueryTool
+10. All existing tests pass
+11. Code follows existing patterns
+
+**Estimate:** 4-5 hours  
+**Details:** See `docs/stories/4.1.story.md`
+
+### Story 4.2: Extend Product Model with Query Methods
+
+As a developer,
+I want Product model extended with price filtering and query methods,
+so that the ProductQueryTool can execute sophisticated product searches from natural language queries.
+
+**Acceptance Criteria:**
+
+1. `Product.filter_by_max_price(max_price)` method implemented
+2. `Product.filter_by_price_range(min_price, max_price)` method implemented
+3. `Product.count` method implemented
+4. All SQL queries use parameterized statements (security)
+5. Results ordered by price ascending, then name ascending
+6. Input validation prevents invalid queries
+7. 25+ new unit tests added
+8. All existing tests pass
+9. Test coverage >80% maintained
+10. RuboCop passes
+11. No database schema changes required
+
+**Estimate:** 3-4 hours  
+**Details:** See `docs/stories/4.2.story.md`
+
+### Story 4.3: Implement ask-product CLI Command
+
+As a user,
+I want to query my product database using natural language via the ask-product command,
+so that I can find products without memorizing exact CLI syntax or product names.
+
+**Acceptance Criteria:**
+
+1. `ask-product "<query>"` command routing added to CLI
+2. Dependency validation (LLM + Storage availability)
+3. API key configuration validation
+4. Query extraction and validation
+5. LLM integration processes queries correctly
+6. Supported queries:
+   - Existence: "Is there a product called banana?"
+   - List all: "Show me all products"
+   - Price filter: "Products under $10"
+   - Price range: "Products between $5 and $15"
+7. Comprehensive error handling (network, API, validation)
+8. Help text updated with examples
+9. README.md updated with documentation
+10. 10+ integration tests created
+11. 3+ E2E tests created
+12. All existing tests pass
+13. Manual testing validates all query types
+
+**Estimate:** 4-5 hours  
+**Details:** See `docs/stories/4.3.story.md`
+
+**Command Examples:**
+```bash
+# Check if product exists
+pocket-knife ask-product "Is there a product called banana?"
+
+# List all products
+pocket-knife ask-product "Show me all products"
+
+# Filter by price
+pocket-knife ask-product "What products cost less than $10?"
+
+# Filter by price range
+pocket-knife ask-product "Products between $5 and $15"
+```
+
+**Dependencies:**
+- Requires: `bundle install --with llm storage`
+- Requires: GEMINI_API_KEY environment variable
+- Builds on: Epic 2 (LLM Integration) and Epic 3 (Product Storage)
+
+**Total Epic Estimate:** 11-14 hours (2-3 days)
 
 ```

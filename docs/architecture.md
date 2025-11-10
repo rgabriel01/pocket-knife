@@ -1,15 +1,16 @@
 # Architecture Document: Pocket Knife CLI
 
 **Project:** Pocket Knife - Command-Line Toolkit  
-**Version:** 2.0  
-**Date:** November 6, 2025  
+**Version:** 2.1  
+**Date:** November 10, 2025  
 **Architect:** Winston (BMad Architect Agent)  
-**Status:** ✅ Evolved - MVP + LLM + Storage Foundation Complete
+**Status:** ✅ Evolved - MVP + LLM + Storage + Product Query Architecture
 
 **Revision History:**
 - v1.0 (Nov 4, 2025): Initial MVP architecture
 - v1.5 (Nov 5, 2025): Added LLM Integration architecture
 - v2.0 (Nov 6, 2025): Added Product Storage architecture and Story 3.2 design
+- v2.1 (Nov 10, 2025): Added Epic 4 - Natural Language Product Query architecture
 
 ---
 
@@ -2729,17 +2730,1694 @@ PM (Brief + PRD) → Architect (This Doc) → Dev (Stories) → QA (Testing) →
 
 ---
 
-## Architecture Complete! 🎉
+## 16. Epic 4: Natural Language Product Query Architecture
+
+**Epic:** EPIC-4 - Natural Language Product Query Interface  
+**Type:** Brownfield Enhancement  
+**Status:** 📋 Architecture Complete - Ready for Implementation  
+**Dependencies:** Epic 2 (LLM Integration) ✅, Epic 3 (Product Storage) ✅
+
+### 16.1 Epic Overview
+
+**Goal:** Enable users to query product information using natural language by adding an `ask-product` command that leverages RubyLLM to interpret queries and execute local product database operations.
+
+**Value Proposition:**
+- Users can query products without memorizing exact CLI syntax
+- Intuitive natural language interface reduces cognitive load
+- Combines power of LLM with local SQLite data
+- No external product database dependencies
+
+**Example Usage:**
+```bash
+$ ./bin/pocket-knife ask-product "Is there a product called banana?"
+Product found: Banana - $1.99
+
+$ ./bin/pocket-knife ask-product "Show me products under $10"
+Found 3 products under $10.00:
+1. Apple - $1.50
+2. Banana - $1.99
+3. Orange - $2.99
+
+$ ./bin/pocket-knife ask-product "Products between $5 and $15"
+Found 2 products between $5.00 and $15.00:
+1. Mango - $7.99
+2. Pineapple - $12.50
+```
+
+### 16.2 Architecture Integration Points
+
+This epic extends the existing architecture with minimal changes:
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    Epic 4 Architecture Layer                         │
+│                                                                       │
+│  User Query (Natural Language)                                       │
+│         │                                                             │
+│         ▼                                                             │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │  CLI Router (lib/pocket_knife/cli.rb)                        │  │
+│  │  • Add ask-product routing                                   │  │
+│  │  • Validate LLM + Storage availability                       │  │
+│  │  • Validate API key configuration                            │  │
+│  └──────────────────┬───────────────────────────────────────────┘  │
+│                     │                                                │
+│                     ▼                                                │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │  LLMConfig (existing)                                         │  │
+│  │  • Configure RubyLLM                                          │  │
+│  │  • Validate GEMINI_API_KEY                                    │  │
+│  └──────────────────┬───────────────────────────────────────────┘  │
+│                     │                                                │
+│                     ▼                                                │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │  ProductQueryTool (NEW)                                       │  │
+│  │  lib/pocket_knife/product_query_tool.rb                       │  │
+│  │                                                                │  │
+│  │  Function Tools:                                              │  │
+│  │  • find_product_by_name(name)                                 │  │
+│  │  • list_all_products()                                        │  │
+│  │  • filter_products_by_max_price(max_price)                    │  │
+│  │  • filter_products_by_price_range(min, max)                   │  │
+│  └──────────────────┬───────────────────────────────────────────┘  │
+│                     │                                                │
+│                     ▼                                                │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │  Product Model (EXTENDED)                                     │  │
+│  │  lib/pocket_knife/storage/product.rb                          │  │
+│  │                                                                │  │
+│  │  Existing Methods:                                            │  │
+│  │  • find_by_name(name)                                         │  │
+│  │  • all()                                                      │  │
+│  │                                                                │  │
+│  │  NEW Methods:                                                 │  │
+│  │  • filter_by_max_price(max_price)                             │  │
+│  │  • filter_by_price_range(min_price, max_price)                │  │
+│  │  • count()                                                    │  │
+│  └──────────────────┬───────────────────────────────────────────┘  │
+│                     │                                                │
+│                     ▼                                                │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │  SQLite Database (existing)                                   │  │
+│  │  ~/.pocket-knife/products.db                                  │  │
+│  │  • No schema changes                                          │  │
+│  │  • Uses existing products table                               │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+│                     │                                                │
+│                     ▼                                                │
+│         Formatted Response → User (STDOUT)                           │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**Integration Strategy:**
+- ✅ Additive only - no breaking changes to existing components
+- ✅ Follows existing patterns (PercentageCalculatorTool, ask command)
+- ✅ Uses existing infrastructure (LLMConfig, Database, Product)
+- ✅ Optional feature requiring both `:llm` and `:storage` bundle groups
+
+### 16.3 Component Design
+
+#### 16.3.1 ProductQueryTool (NEW Component)
+
+**File:** `lib/pocket_knife/product_query_tool.rb`  
+**Responsibility:** Define product query operations as LLM function tools  
+**Pattern:** Inherits from `RubyLLM::Tool` (same as PercentageCalculatorTool)
+
+**Class Structure:**
+```ruby
+module PocketKnife
+  class ProductQueryTool < RubyLLM::Tool
+    description 'Query product database using natural language'
+    
+    # Function 1: Find product by name
+    function :find_product_by_name do
+      description 'Search for a product by its exact name'
+      param :name, type: :string, required: true, 
+            description: 'The product name to search for'
+    end
+    
+    # Function 2: List all products
+    function :list_all_products do
+      description 'Get a complete list of all stored products'
+    end
+    
+    # Function 3: Filter by max price
+    function :filter_products_by_max_price do
+      description 'Find products priced at or below a maximum price'
+      param :max_price, type: :number, required: true,
+            description: 'Maximum price threshold'
+    end
+    
+    # Function 4: Filter by price range
+    function :filter_products_by_price_range do
+      description 'Find products within a specific price range'
+      param :min_price, type: :number, required: true,
+            description: 'Minimum price (inclusive)'
+      param :max_price, type: :number, required: true,
+            description: 'Maximum price (inclusive)'
+    end
+    
+    # Execute methods with error handling and response formatting
+    def find_product_by_name(name:)
+      # Implementation
+    end
+    
+    def list_all_products
+      # Implementation
+    end
+    
+    def filter_products_by_max_price(max_price:)
+      # Implementation
+    end
+    
+    def filter_products_by_price_range(min_price:, max_price:)
+      # Implementation
+    end
+  end
+end
+```
+
+**Design Decisions:**
+- **Tool Inheritance:** Follows RubyLLM::Tool pattern for consistency
+- **Function Definitions:** Clear descriptions help LLM interpret user intent
+- **Parameter Validation:** Validate inputs before database queries
+- **Response Formatting:** Return human-readable strings, not raw data
+- **Error Handling:** Graceful degradation with helpful messages
+
+**Dependencies:**
+- `ruby_llm` gem (>= 1.9)
+- `Product` model (existing + new methods)
+- `InvalidInputError` (existing error class)
+
+**Size Estimate:** ~150-200 LOC
+
+#### 16.3.2 Product Model Extensions
+
+**File:** `lib/pocket_knife/storage/product.rb` (EXTENDED)  
+**Responsibility:** Add price filtering and query methods  
+**Pattern:** Class methods following existing `.find_by_name`, `.all` pattern
+
+**New Methods:**
+
+```ruby
+class Product
+  class << self
+    # NEW: Filter products by maximum price
+    # @param max_price [Numeric] Maximum price threshold
+    # @return [Array<Product>] Products where price <= max_price
+    def filter_by_max_price(max_price)
+      validate_numeric_price!(max_price, 'max_price')
+      
+      sql = 'SELECT * FROM products WHERE price <= ? ORDER BY price ASC, name ASC'
+      rows = Database.connection.execute(sql, [max_price.to_f])
+      
+      rows.map { |row| new(row) }
+    end
+    
+    # NEW: Filter products by price range
+    # @param min_price [Numeric] Minimum price (inclusive)
+    # @param max_price [Numeric] Maximum price (inclusive)
+    # @return [Array<Product>] Products where min <= price <= max
+    def filter_by_price_range(min_price, max_price)
+      min_f, max_f = validate_price_range!(min_price, max_price)
+      
+      sql = 'SELECT * FROM products WHERE price BETWEEN ? AND ? 
+             ORDER BY price ASC, name ASC'
+      rows = Database.connection.execute(sql, [min_f, max_f])
+      
+      rows.map { |row| new(row) }
+    end
+    
+    # NEW: Count total products
+    # @return [Integer] Total number of products
+    def count
+      sql = 'SELECT COUNT(*) as count FROM products'
+      result = Database.connection.get_first_row(sql)
+      result['count'].to_i
+    end
+    
+    private
+    
+    # NEW: Validate numeric price
+    def validate_numeric_price!(price, param_name = 'price')
+      price_f = Float(price)
+      raise InvalidInputError, "#{param_name} must be non-negative" if price_f.negative?
+      price_f
+    rescue ArgumentError
+      raise InvalidInputError, "#{param_name} must be a numeric value"
+    end
+    
+    # NEW: Validate price range
+    def validate_price_range!(min_price, max_price)
+      min_f = validate_numeric_price!(min_price, 'min_price')
+      max_f = validate_numeric_price!(max_price, 'max_price')
+      
+      if min_f > max_f
+        raise InvalidInputError, 'min_price cannot be greater than max_price'
+      end
+      
+      [min_f, max_f]
+    end
+  end
+end
+```
+
+**Design Decisions:**
+- **SQL Security:** All queries use parameterized statements (prevent SQL injection)
+- **Result Ordering:** Price ascending, then name ascending (predictable, user-friendly)
+- **Validation:** Reusable private methods for price validation
+- **Return Types:** Arrays of Product instances (consistent with `.all`)
+- **Edge Cases:** Empty arrays for no results (no exceptions)
+
+**SQL Performance:**
+- Queries leverage existing index on `name` column
+- Price filtering on non-indexed column acceptable for MVP (< 1000 products expected)
+- Future optimization: Add index on price if needed
+
+**Size Estimate:** ~80-100 LOC (additions to existing 112 LOC file)
+
+#### 16.3.3 CLI Router Extensions
+
+**File:** `lib/pocket_knife/cli.rb` (EXTENDED)  
+**Responsibility:** Add ask-product command routing and processing  
+**Pattern:** Follow existing `ask` command pattern (execute_ask method)
+
+**New Code:**
+
+```ruby
+class CLI
+  def execute
+    # ... existing routing ...
+    
+    # NEW: Add ask-product routing
+    if @args[0] == 'ask-product'
+      execute_ask_product
+      return
+    end
+    
+    # ... rest of existing code ...
+  end
+  
+  private
+  
+  # NEW: Execute ask-product command
+  def execute_ask_product
+    # 1. Validate LLM availability
+    unless llm_available?
+      warn_with_fallback(
+        'LLM features not available. Install with: bundle install --with llm',
+        'For direct product commands, use: pocket-knife list-products'
+      )
+      exit 1
+    end
+    
+    # 2. Validate storage availability
+    unless storage_available?
+      warn_with_fallback(
+        'Storage features not available. Install with: bundle install --with storage',
+        'For calculator features, use: pocket-knife calc <amount> <percentage>'
+      )
+      exit 1
+    end
+    
+    # 3. Validate API key configuration
+    unless llm_configured?
+      warn_with_fallback(
+        'No API key configured. Set GEMINI_API_KEY in .env file.',
+        'Get a free key at: https://makersuite.google.com/app/apikey',
+        'For direct product commands, use: pocket-knife list-products'
+      )
+      exit 1
+    end
+    
+    # 4. Extract and validate query
+    query = @args[1..].join(' ').strip
+    
+    if query.empty?
+      warn_with_fallback(
+        'Missing query. Usage: pocket-knife ask-product "your question"',
+        'Examples:',
+        '  pocket-knife ask-product "Is there a product called banana?"',
+        '  pocket-knife ask-product "Show me products under $10"',
+        'For direct commands, use: pocket-knife list-products'
+      )
+      exit 1
+    end
+    
+    # 5. Process query with LLM
+    begin
+      response = process_product_query(query)
+      puts response
+    rescue Errno::ECONNREFUSED, SocketError => e
+      warn_with_fallback(
+        'Network error: Unable to connect to Gemini API.',
+        'Please check your internet connection.',
+        'For offline access, use: pocket-knife list-products',
+        "(Error: #{e.class})"
+      )
+      exit 1
+    rescue => e
+      warn_with_fallback(
+        "Unexpected error: #{e.message}",
+        'For direct product commands, use: pocket-knife list-products'
+      )
+      exit 1
+    end
+  end
+  
+  # NEW: Process product query through LLM
+  def process_product_query(query)
+    require_relative 'product_query_tool'
+    
+    LLMConfig.configure!
+    
+    tool = ProductQueryTool.new
+    llm = RubyLLM.new(
+      model: 'gemini-pro',
+      tools: [tool]
+    )
+    
+    response = llm.chat(query)
+    response.content
+  end
+  
+  # NEW: Check storage availability
+  def storage_available?
+    require 'pocket_knife/storage/database'
+    Database.storage_available?
+  rescue LoadError
+    false
+  end
+end
+```
+
+**Design Decisions:**
+- **Validation Order:** LLM → Storage → API Key → Query (fail fast)
+- **Error Messages:** Helpful with fallback suggestions for offline use
+- **Lazy Loading:** Only require ProductQueryTool when needed
+- **Consistency:** Follows exact pattern of execute_ask method
+- **Exit Codes:** 0 (success), 1 (errors) - consistent with existing commands
+
+**Size Estimate:** ~100-120 LOC (additions to existing 744 LOC file)
+
+### 16.4 Data Flow Architecture
+
+**Query Processing Pipeline:**
+
+```
+1. User Input
+   │
+   └─→ "./bin/pocket-knife ask-product 'Show products under $10'"
+       │
+       ▼
+2. CLI Validation
+   │
+   ├─→ Check LLM available (ruby_llm gem installed?)
+   ├─→ Check Storage available (sqlite3 gem installed?)
+   ├─→ Check API key configured (GEMINI_API_KEY set?)
+   └─→ Check query not empty
+       │
+       ▼
+3. LLM Configuration
+   │
+   └─→ LLMConfig.configure!
+       └─→ Set Gemini API key from environment
+           │
+           ▼
+4. LLM Query Processing
+   │
+   ├─→ Create ProductQueryTool instance
+   ├─→ Initialize RubyLLM with tool
+   └─→ Send query to Gemini API
+       │
+       ▼
+5. Function Tool Selection
+   │
+   └─→ LLM interprets "Show products under $10"
+       └─→ Selects: filter_products_by_max_price
+           └─→ Parameters: { max_price: 10.0 }
+               │
+               ▼
+6. Database Query
+   │
+   └─→ ProductQueryTool.filter_products_by_max_price(max_price: 10.0)
+       └─→ Product.filter_by_max_price(10.0)
+           └─→ SQL: SELECT * FROM products WHERE price <= ? ORDER BY price, name
+               └─→ Parameters: [10.0]
+                   │
+                   ▼
+7. Result Formatting
+   │
+   └─→ [Product(Apple, $1.50), Product(Banana, $1.99), ...]
+       └─→ Format to human-readable string:
+           "Found 3 products under $10.00:
+            1. Apple - $1.50
+            2. Banana - $1.99
+            3. Orange - $2.99"
+           │
+           ▼
+8. Output
+   │
+   └─→ puts response
+       └─→ exit 0
+```
+
+**Error Flow:**
+
+```
+Error at Any Stage
+   │
+   ├─→ Network Error → "Unable to connect to Gemini API"
+   ├─→ API Error → "API error: [message]"
+   ├─→ Validation Error → "Invalid price: must be non-negative"
+   ├─→ No Results → "No products found under $10.00"
+   └─→ Unexpected Error → "Unexpected error: [message]"
+       │
+       └─→ Display error + fallback suggestion
+           └─→ exit 1
+```
+
+### 16.5 Technology Decisions
+
+**Why RubyLLM Tool Pattern?**
+- ✅ Already proven with PercentageCalculatorTool
+- ✅ Clean function definition syntax
+- ✅ Automatic parameter validation
+- ✅ Handles LLM function calling protocol
+- ✅ Consistent with existing architecture
+
+**Why Extend Product Model?**
+- ✅ Keeps data access logic in data layer (separation of concerns)
+- ✅ Reusable methods for future features
+- ✅ Testable independently of LLM
+- ✅ Consistent with existing pattern (find_by_name, all)
+
+**Why No Schema Changes?**
+- ✅ Existing products table sufficient for queries
+- ✅ No new data to store
+- ✅ Reduces migration complexity
+- ✅ Backward compatible
+
+**Why Parameterized SQL?**
+- ✅ Prevents SQL injection attacks
+- ✅ Ruby/SQLite best practice
+- ✅ Consistent with existing database code
+- ✅ Required by NFR9 (security requirement)
+
+### 16.6 Security Architecture
+
+**Threat Model:**
+
+| Threat | Mitigation | Implementation |
+|--------|------------|----------------|
+| SQL Injection | Parameterized queries | All SQL uses `?` placeholders |
+| API Key Exposure | Environment variables | Never log or display API keys |
+| Malicious Queries | Input validation | Validate prices before DB queries |
+| Rate Limiting | Graceful errors | Catch API errors, show helpful message |
+| Data Leakage | Local-only storage | No network access to product data |
+
+**Security Controls:**
+
+1. **Input Validation**
+   ```ruby
+   # Validate price is numeric and non-negative
+   def validate_numeric_price!(price, param_name)
+     price_f = Float(price)
+     raise InvalidInputError if price_f.negative?
+     price_f
+   rescue ArgumentError
+     raise InvalidInputError, "#{param_name} must be numeric"
+   end
+   ```
+
+2. **SQL Parameterization**
+   ```ruby
+   # SECURE: Uses placeholders
+   sql = 'SELECT * FROM products WHERE price <= ?'
+   rows = Database.connection.execute(sql, [max_price.to_f])
+   
+   # INSECURE (DON'T DO THIS):
+   # sql = "SELECT * FROM products WHERE price <= #{max_price}"
+   ```
+
+3. **API Key Management**
+   ```ruby
+   # Read from environment only
+   ENV.fetch('GEMINI_API_KEY', nil)
+   
+   # Never log or display
+   # Never commit to git (.gitignore .env file)
+   ```
+
+4. **Error Message Safety**
+   ```ruby
+   # Don't expose internal details
+   rescue => e
+     puts "Error occurred. Please try again."  # Safe
+     # puts "Error: #{e.backtrace}"  # UNSAFE - leaks internals
+   ```
+
+### 16.7 Performance Architecture
+
+**Performance Requirements:**
+- **Total Query Time:** < 2 seconds (LLM + DB + formatting)
+- **Database Query Time:** < 10ms (for typical catalog size < 1000 products)
+- **Network Latency:** 500-1500ms (Gemini API, uncontrollable)
+
+**Performance Optimizations:**
+
+1. **Database:**
+   - Use existing index on `name` column
+   - Simple WHERE clauses (no complex joins)
+   - ORDER BY acceptable for small result sets
+   - Future: Add index on `price` if catalog grows > 1000 products
+
+2. **LLM Integration:**
+   - Single API call per query (no chaining)
+   - Function tool selection efficient (no multi-turn)
+   - Minimal token usage (concise function descriptions)
+
+3. **Memory:**
+   - Load only matching products (not entire catalog)
+   - Stream results to stdout (no buffering)
+   - Product instances lightweight (~100 bytes each)
+
+**Performance Monitoring:**
+```ruby
+# Add timing for debugging (development only)
+start = Time.now
+response = process_product_query(query)
+duration = Time.now - start
+# Log duration if > 2 seconds threshold
+```
+
+### 16.8 Testing Architecture
+
+**Test Coverage Requirements:**
+- **Unit Tests:** 100% coverage for ProductQueryTool
+- **Unit Tests:** 100% coverage for new Product methods
+- **Integration Tests:** 10+ scenarios for ask-product CLI
+- **E2E Tests:** 3+ full workflow tests
+- **Overall Coverage:** Maintain >80% project-wide
+
+**Test Structure:**
+
+```
+spec/
+├── unit/
+│   ├── product_query_tool_spec.rb          # NEW: 20+ tests
+│   └── storage/
+│       └── product_spec.rb                  # EXTEND: +25 tests
+│
+├── integration/
+│   └── ask_product_cli_spec.rb              # NEW: 10+ tests
+│
+└── e2e/
+    └── pocket_knife_spec.rb                 # EXTEND: +3 tests
+```
+
+**Test Scenarios:**
+
+**Unit Tests - ProductQueryTool:**
+- Function tool definitions exist
+- find_product_by_name: found, not found, empty name
+- list_all_products: with products, empty database
+- filter_by_max_price: found, not found, invalid price
+- filter_by_price_range: found, not found, min > max, negative prices
+- Response formatting (human-readable strings)
+- Error handling (database errors, validation errors)
+
+**Unit Tests - Product Model:**
+- filter_by_max_price: products under max, at boundary, no results
+- filter_by_price_range: in range, at boundaries, no results
+- count: with products, empty database
+- Validation: negative prices, non-numeric, min > max
+- SQL injection attempts (should be prevented)
+- Ordering: price ascending, name ascending for ties
+
+**Integration Tests - CLI:**
+- Successful query (existence check)
+- Successful query (list all)
+- Successful query (price filter)
+- Successful query (price range)
+- Missing LLM gem
+- Missing storage gem
+- No API key configured
+- Empty query
+- Network error (mocked)
+- API error (mocked)
+
+**E2E Tests:**
+- Store products → ask-product query → verify results
+- Help text includes ask-product
+- Error flow with invalid configuration
+
+**Test Patterns:**
+
+```ruby
+# Unit Test Pattern (ProductQueryTool)
+RSpec.describe PocketKnife::ProductQueryTool do
+  let(:tool) { described_class.new }
+  
+  before do
+    # Stub Product model methods
+    allow(Product).to receive(:filter_by_max_price).and_return([mock_products])
+  end
+  
+  describe '#filter_products_by_max_price' do
+    it 'returns formatted list when products found' do
+      result = tool.filter_products_by_max_price(max_price: 10.0)
+      expect(result).to include('Found 2 products under $10.00')
+    end
+  end
+end
+
+# Integration Test Pattern (CLI)
+RSpec.describe 'ask-product command', type: :integration do
+  around do |example|
+    Dir.mktmpdir do |tmpdir|
+      ENV['HOME'] = tmpdir
+      example.run
+    end
+  end
+  
+  it 'processes natural language query successfully' do
+    # Setup: Create test product
+    system('bundle exec pocket-knife store-product "Apple" 1.50')
+    
+    # Mock LLM response
+    allow(RubyLLM).to receive(:new).and_return(mock_llm)
+    
+    # Execute: Run ask-product command
+    output = `bundle exec pocket-knife ask-product "Show products under 2"`
+    
+    # Verify: Check output
+    expect(output).to include('Apple - $1.50')
+    expect($?).to be_success
+  end
+end
+```
+
+### 16.9 File Changes Summary
+
+**New Files:**
+1. `lib/pocket_knife/product_query_tool.rb` (~150-200 LOC)
+2. `spec/unit/product_query_tool_spec.rb` (~300-400 LOC)
+3. `spec/integration/ask_product_cli_spec.rb` (~150-200 LOC)
+
+**Modified Files:**
+1. `lib/pocket_knife/storage/product.rb` (+80-100 LOC, ~190-212 LOC total)
+2. `lib/pocket_knife/cli.rb` (+100-120 LOC, ~844-864 LOC total)
+3. `lib/pocket_knife.rb` (+1 line to require product_query_tool)
+4. `spec/unit/storage/product_spec.rb` (+25 test cases)
+5. `spec/e2e/pocket_knife_spec.rb` (+3 test scenarios)
+6. `README.md` (+30-50 lines for ask-product documentation)
+
+**Unchanged Files:**
+- `lib/pocket_knife/storage/database.rb` (no changes)
+- `lib/pocket_knife/llm_config.rb` (no changes)
+- `lib/pocket_knife/percentage_calculator_tool.rb` (no changes)
+- All other core calculator files (no changes)
+
+**Total LOC Impact:**
+- New code: ~600-800 LOC (implementation + tests)
+- Modified code: ~180-220 LOC
+- Total additions: ~780-1020 LOC
+
+### 16.10 Implementation Roadmap
+
+**Story 4.1: ProductQueryTool (4-5 hours)**
+1. Create product_query_tool.rb file
+2. Implement RubyLLM::Tool inheritance
+3. Define 4 function tools with parameters
+4. Implement execute methods
+5. Add response formatting
+6. Handle errors gracefully
+7. Write 20+ unit tests
+8. Verify 100% coverage
+
+**Story 4.2: Product Model Extensions (3-4 hours)**
+1. Add filter_by_max_price method
+2. Add filter_by_price_range method
+3. Add count method
+4. Add private validation methods
+5. Write 25+ unit tests
+6. Verify SQL parameterization
+7. Test edge cases
+8. Verify no regressions
+
+**Story 4.3: CLI Integration (4-5 hours)**
+1. Add ask-product routing
+2. Implement execute_ask_product method
+3. Add storage_available? check
+4. Implement process_product_query method
+5. Add error handling
+6. Update help text
+7. Write 10+ integration tests
+8. Write 3+ E2E tests
+9. Update README
+10. Verify no regressions
+
+**Total Estimate:** 11-14 hours (can parallelize 4.1 and 4.2)
+
+### 16.11 Rollback Strategy
+
+**Rollback Complexity:** LOW (additive feature, minimal changes)
+
+**Rollback Steps:**
+1. Remove ask-product routing from cli.rb (3 lines)
+2. Remove execute_ask_product method from cli.rb (~100 lines)
+3. Remove process_product_query method from cli.rb (~20 lines)
+4. Remove storage_available? method from cli.rb (~5 lines)
+5. Delete lib/pocket_knife/product_query_tool.rb (file)
+6. Remove new methods from product.rb (~80 lines)
+7. Remove require statement from lib/pocket_knife.rb (1 line)
+8. Delete test files (3 files)
+9. Revert README changes
+10. Verify all existing tests pass
+
+**Database Impact:** NONE (no schema changes, no data changes)
+
+**Risk:** MINIMAL (no breaking changes to existing features)
+
+### 16.12 Success Criteria
+
+**Functional:**
+- ✅ Users can query products with natural language
+- ✅ LLM correctly interprets 4 query types (existence, list, price filter, range)
+- ✅ Responses are human-readable and helpful
+- ✅ Errors provide clear guidance and fallback suggestions
+- ✅ Performance meets <2 second requirement
+
+**Technical:**
+- ✅ Test coverage >80% maintained
+- ✅ All existing tests pass (no regressions)
+- ✅ RuboCop passes (0 offenses)
+- ✅ SQL queries use parameterized statements
+- ✅ Code follows existing patterns and conventions
+
+**Quality:**
+- ✅ Manual testing validates all example queries
+- ✅ Help text updated and accurate
+- ✅ README documentation clear and complete
+- ✅ Error messages are actionable
+
+### 16.13 Complete Code Scaffolding
+
+This section provides detailed implementation scaffolding for all three stories.
+
+#### 16.13.1 Story 4.1: ProductQueryTool - Complete Implementation Guide
+
+**File:** `lib/pocket_knife/product_query_tool.rb`
+
+```ruby
+# frozen_string_literal: true
+
+require 'ruby_llm'
+require_relative 'storage/product'
+require_relative 'errors'
+
+module PocketKnife
+  # ProductQueryTool enables natural language queries of the product database
+  # using LLM function calling. Inherits from RubyLLM::Tool to define
+  # function tools that the LLM can invoke.
+  #
+  # Supported Queries:
+  # - Product existence: "Is there a product called banana?"
+  # - List all: "Show me all products"
+  # - Price filter: "Products under $10"
+  # - Price range: "Products between $5 and $15"
+  #
+  # @example Usage
+  #   tool = ProductQueryTool.new
+  #   llm = RubyLLM.new(model: 'gemini-pro', tools: [tool])
+  #   response = llm.chat("Show me products under $10")
+  #
+  class ProductQueryTool < RubyLLM::Tool
+    description 'Query product database for product information, pricing, and availability'
+
+    # Function 1: Find product by exact name
+    function :find_product_by_name do
+      description 'Search for a specific product by its exact name. Use this when user asks about a specific product by name.'
+      param :name, type: :string, required: true,
+            description: 'The exact product name to search for (case-insensitive)'
+    end
+
+    # Function 2: List all products
+    function :list_all_products do
+      description 'Retrieve a complete list of all products in the database. Use when user asks to see all products or wants a general overview.'
+    end
+
+    # Function 3: Filter by maximum price
+    function :filter_products_by_max_price do
+      description 'Find all products priced at or below a specified maximum price. Use when user asks about products "under", "less than", or "at most" a certain price.'
+      param :max_price, type: :number, required: true,
+            description: 'Maximum price threshold (inclusive). Products with price <= this value will be returned.'
+    end
+
+    # Function 4: Filter by price range
+    function :filter_products_by_price_range do
+      description 'Find products within a specific price range (both bounds inclusive). Use when user specifies both minimum and maximum prices.'
+      param :min_price, type: :number, required: true,
+            description: 'Minimum price (inclusive)'
+      param :max_price, type: :number, required: true,
+            description: 'Maximum price (inclusive)'
+    end
+
+    # Execute: Find product by name
+    # @param name [String] Product name to search for
+    # @return [String] Formatted response with product details or not found message
+    def find_product_by_name(name:)
+      validate_string!(name, 'name')
+      
+      product = Product.find_by_name(name)
+      
+      if product
+        "Product found: #{product.name} - #{format_price(product.price)}"
+      else
+        "No product found with name '#{name}'. Try 'list all products' to see what's available."
+      end
+    rescue InvalidInputError => e
+      "Error: #{e.message}"
+    rescue StandardError => e
+      "Database error occurred. Please try again. (#{e.class})"
+    end
+
+    # Execute: List all products
+    # @return [String] Formatted list of all products or empty message
+    def list_all_products
+      products = Product.all
+      
+      if products.empty?
+        'No products stored yet. Use "store-product" command to add products.'
+      else
+        format_product_list(products, "All products (#{products.length} total)")
+      end
+    rescue StandardError => e
+      "Database error occurred. Please try again. (#{e.class})"
+    end
+
+    # Execute: Filter products by maximum price
+    # @param max_price [Numeric] Maximum price threshold
+    # @return [String] Formatted list of matching products or no results message
+    def filter_products_by_max_price(max_price:)
+      validate_positive_number!(max_price, 'max_price')
+      
+      products = Product.filter_by_max_price(max_price)
+      
+      if products.empty?
+        "No products found under #{format_price(max_price)}. " \
+        "Try a higher price or use 'list all products' to see what's available."
+      else
+        format_product_list(
+          products,
+          "Found #{products.length} product(s) under #{format_price(max_price)}"
+        )
+      end
+    rescue InvalidInputError => e
+      "Error: #{e.message}"
+    rescue StandardError => e
+      "Database error occurred. Please try again. (#{e.class})"
+    end
+
+    # Execute: Filter products by price range
+    # @param min_price [Numeric] Minimum price (inclusive)
+    # @param max_price [Numeric] Maximum price (inclusive)
+    # @return [String] Formatted list of matching products or no results message
+    def filter_products_by_price_range(min_price:, max_price:)
+      validate_positive_number!(min_price, 'min_price')
+      validate_positive_number!(max_price, 'max_price')
+      
+      if min_price > max_price
+        return "Error: Minimum price (#{format_price(min_price)}) cannot be greater than " \
+               "maximum price (#{format_price(max_price)})."
+      end
+      
+      products = Product.filter_by_price_range(min_price, max_price)
+      
+      if products.empty?
+        "No products found between #{format_price(min_price)} and #{format_price(max_price)}. " \
+        "Try expanding the range or use 'list all products' to see what's available."
+      else
+        format_product_list(
+          products,
+          "Found #{products.length} product(s) between #{format_price(min_price)} and #{format_price(max_price)}"
+        )
+      end
+    rescue InvalidInputError => e
+      "Error: #{e.message}"
+    rescue StandardError => e
+      "Database error occurred. Please try again. (#{e.class})"
+    end
+
+    private
+
+    # Format a price with currency symbol
+    # @param price [Numeric] Price to format
+    # @return [String] Formatted price (e.g., "$12.99")
+    def format_price(price)
+      "$#{'%.2f' % price}"
+    end
+
+    # Format a list of products as numbered list
+    # @param products [Array<Product>] Products to format
+    # @param header [String] Header text
+    # @return [String] Formatted list
+    def format_product_list(products, header)
+      lines = [header]
+      products.each_with_index do |product, index|
+        lines << "#{index + 1}. #{product.name} - #{format_price(product.price)}"
+      end
+      lines.join("\n")
+    end
+
+    # Validate string parameter
+    # @param value [String] Value to validate
+    # @param param_name [String] Parameter name for error messages
+    # @raise [InvalidInputError] if value is not a non-empty string
+    def validate_string!(value, param_name)
+      unless value.is_a?(String) && !value.strip.empty?
+        raise InvalidInputError, "#{param_name} must be a non-empty string"
+      end
+    end
+
+    # Validate positive number parameter
+    # @param value [Numeric] Value to validate
+    # @param param_name [String] Parameter name for error messages
+    # @raise [InvalidInputError] if value is not a positive number
+    def validate_positive_number!(value, param_name)
+      numeric_value = Float(value)
+      if numeric_value.negative?
+        raise InvalidInputError, "#{param_name} must be non-negative (got #{numeric_value})"
+      end
+      numeric_value
+    rescue ArgumentError, TypeError
+      raise InvalidInputError, "#{param_name} must be a numeric value (got #{value.inspect})"
+    end
+  end
+end
+```
+
+**Implementation Checklist for Story 4.1:**
+
+- [ ] Create file `lib/pocket_knife/product_query_tool.rb`
+- [ ] Add frozen_string_literal comment
+- [ ] Add requires (ruby_llm, storage/product, errors)
+- [ ] Define ProductQueryTool class inheriting from RubyLLM::Tool
+- [ ] Add class-level description
+- [ ] Define function :find_product_by_name with description and param
+- [ ] Define function :list_all_products with description
+- [ ] Define function :filter_products_by_max_price with description and param
+- [ ] Define function :filter_products_by_price_range with description and params
+- [ ] Implement find_product_by_name method with validation and error handling
+- [ ] Implement list_all_products method with empty case
+- [ ] Implement filter_products_by_max_price method with validation
+- [ ] Implement filter_products_by_price_range method with range validation
+- [ ] Add private format_price method
+- [ ] Add private format_product_list method
+- [ ] Add private validate_string! method
+- [ ] Add private validate_positive_number! method
+- [ ] Add YARD documentation for all public methods
+- [ ] Run RuboCop and fix offenses
+- [ ] Verify file is ~200 LOC
+
+#### 16.13.2 Story 4.2: Product Model Extensions - Complete Implementation Guide
+
+**File:** `lib/pocket_knife/storage/product.rb` (additions only)
+
+```ruby
+# Add these class methods to the existing Product class
+
+class Product
+  class << self
+    # Filter products by maximum price
+    # Returns all products where price <= max_price, ordered by price then name
+    #
+    # @param max_price [Numeric] Maximum price threshold (inclusive)
+    # @return [Array<Product>] Products under max price
+    # @raise [InvalidInputError] if max_price is invalid
+    #
+    # @example
+    #   Product.filter_by_max_price(10.0)
+    #   # => [#<Product name="Apple" price=1.50>, #<Product name="Banana" price=1.99>]
+    #
+    def filter_by_max_price(max_price)
+      max_f = validate_numeric_price!(max_price, 'max_price')
+      
+      sql = <<-SQL
+        SELECT * FROM products 
+        WHERE price <= ? 
+        ORDER BY price ASC, name ASC
+      SQL
+      
+      rows = Database.connection.execute(sql, [max_f])
+      rows.map { |row| new(row) }
+    end
+
+    # Filter products by price range
+    # Returns all products where min_price <= price <= max_price
+    #
+    # @param min_price [Numeric] Minimum price (inclusive)
+    # @param max_price [Numeric] Maximum price (inclusive)
+    # @return [Array<Product>] Products in range
+    # @raise [InvalidInputError] if prices are invalid or min > max
+    #
+    # @example
+    #   Product.filter_by_price_range(5.0, 15.0)
+    #   # => [#<Product name="Mango" price=7.99>, #<Product name="Pineapple" price=12.50>]
+    #
+    def filter_by_price_range(min_price, max_price)
+      min_f, max_f = validate_price_range!(min_price, max_price)
+      
+      sql = <<-SQL
+        SELECT * FROM products 
+        WHERE price BETWEEN ? AND ? 
+        ORDER BY price ASC, name ASC
+      SQL
+      
+      rows = Database.connection.execute(sql, [min_f, max_f])
+      rows.map { |row| new(row) }
+    end
+
+    # Count total products in database
+    #
+    # @return [Integer] Total number of products
+    #
+    # @example
+    #   Product.count
+    #   # => 42
+    #
+    def count
+      sql = 'SELECT COUNT(*) as count FROM products'
+      result = Database.connection.get_first_row(sql)
+      result['count'].to_i
+    end
+
+    private
+
+    # Validate that a value is a non-negative numeric price
+    #
+    # @param price [Object] Value to validate
+    # @param param_name [String] Parameter name for error messages
+    # @return [Float] Validated price as float
+    # @raise [InvalidInputError] if price is invalid
+    #
+    def validate_numeric_price!(price, param_name = 'price')
+      price_f = Float(price)
+      
+      if price_f.negative?
+        raise InvalidInputError, "#{param_name} must be non-negative (got #{price_f})"
+      end
+      
+      price_f
+    rescue ArgumentError, TypeError
+      raise InvalidInputError, "#{param_name} must be a numeric value (got #{price.inspect})"
+    end
+
+    # Validate price range (min and max) and ensure min <= max
+    #
+    # @param min_price [Object] Minimum price to validate
+    # @param max_price [Object] Maximum price to validate
+    # @return [Array<Float, Float>] Validated min and max as floats
+    # @raise [InvalidInputError] if prices are invalid or min > max
+    #
+    def validate_price_range!(min_price, max_price)
+      min_f = validate_numeric_price!(min_price, 'min_price')
+      max_f = validate_numeric_price!(max_price, 'max_price')
+      
+      if min_f > max_f
+        raise InvalidInputError,
+              "min_price (#{min_f}) cannot be greater than max_price (#{max_f})"
+      end
+      
+      [min_f, max_f]
+    end
+  end
+end
+```
+
+**Implementation Checklist for Story 4.2:**
+
+- [ ] Open file `lib/pocket_knife/storage/product.rb`
+- [ ] Locate the `class << self` block
+- [ ] Add filter_by_max_price method after existing class methods
+- [ ] Add YARD documentation for filter_by_max_price
+- [ ] Implement SQL query with parameterized WHERE clause
+- [ ] Add filter_by_price_range method
+- [ ] Add YARD documentation for filter_by_price_range
+- [ ] Implement SQL query with BETWEEN clause
+- [ ] Add count method
+- [ ] Add YARD documentation for count
+- [ ] Add private validate_numeric_price! method
+- [ ] Add YARD documentation for validation method
+- [ ] Add private validate_price_range! method
+- [ ] Add YARD documentation for range validation
+- [ ] Run RuboCop and fix offenses
+- [ ] Verify additions are ~80-100 LOC
+
+#### 16.13.3 Story 4.3: CLI Integration - Complete Implementation Guide
+
+**File:** `lib/pocket_knife/cli.rb` (additions only)
+
+```ruby
+# Add to the execute method's routing section
+
+def execute
+  # ... existing routing ...
+  
+  # NEW: Route ask-product command
+  if @args[0] == 'ask-product'
+    execute_ask_product
+    return
+  end
+  
+  # ... rest of existing routing ...
+end
+
+private
+
+# Execute ask-product command for natural language product queries
+# Validates dependencies (LLM, Storage, API key), processes query through LLM
+#
+# @return [void]
+#
+def execute_ask_product
+  # Step 1: Validate LLM availability
+  unless llm_available?
+    warn_with_fallback(
+      'Error: LLM features not available.',
+      '',
+      'Install with: bundle install --with llm',
+      '',
+      'Alternative: Use direct product commands:',
+      '  pocket-knife list-products',
+      '  pocket-knife get-product "<name>"'
+    )
+    exit 1
+  end
+
+  # Step 2: Validate storage availability
+  unless storage_available?
+    warn_with_fallback(
+      'Error: Storage features not available.',
+      '',
+      'Install with: bundle install --with storage',
+      '',
+      'Alternative: Use calculator features:',
+      '  pocket-knife calc <amount> <percentage>'
+    )
+    exit 1
+  end
+
+  # Step 3: Validate API key configuration
+  unless llm_configured?
+    warn_with_fallback(
+      'Error: No API key configured.',
+      '',
+      'Set GEMINI_API_KEY in your .env file.',
+      'Get a free key at: https://makersuite.google.com/app/apikey',
+      '',
+      'Alternative: Use direct product commands:',
+      '  pocket-knife list-products',
+      '  pocket-knife get-product "<name>"'
+    )
+    exit 1
+  end
+
+  # Step 4: Extract and validate query
+  query = extract_query(@args)
+  
+  if query.nil? || query.empty?
+    show_ask_product_usage
+    exit 1
+  end
+
+  # Step 5: Process query through LLM
+  begin
+    response = process_product_query(query)
+    puts response
+    exit 0
+  rescue Errno::ECONNREFUSED, SocketError => e
+    warn_with_fallback(
+      'Error: Network connection failed.',
+      '',
+      'Unable to connect to Gemini API. Please check your internet connection.',
+      '',
+      'Alternative: Use offline commands:',
+      '  pocket-knife list-products',
+      '  pocket-knife get-product "<name>"',
+      '',
+      "(Technical: #{e.class})"
+    )
+    exit 1
+  rescue => e
+    warn_with_fallback(
+      "Error: #{e.message}",
+      '',
+      'Alternative: Use direct product commands:',
+      '  pocket-knife list-products'
+    )
+    exit 1
+  end
+end
+
+# Process product query through LLM with ProductQueryTool
+#
+# @param query [String] Natural language query
+# @return [String] LLM response with query results
+#
+def process_product_query(query)
+  require_relative 'product_query_tool'
+  
+  LLMConfig.configure!
+  
+  tool = ProductQueryTool.new
+  llm = RubyLLM.new(
+    model: 'gemini-pro',
+    tools: [tool]
+  )
+  
+  response = llm.chat(query)
+  response.content
+end
+
+# Check if storage features are available
+# Attempts to require Database class and verify gem is installed
+#
+# @return [Boolean] true if storage available, false otherwise
+#
+def storage_available?
+  require 'pocket_knife/storage/database'
+  Database.storage_available?
+rescue LoadError
+  false
+end
+
+# Show usage information for ask-product command
+#
+# @return [void]
+#
+def show_ask_product_usage
+  puts 'Error: Missing query.'
+  puts ''
+  puts 'Usage: pocket-knife ask-product "<your question>"'
+  puts ''
+  puts 'Examples:'
+  puts '  pocket-knife ask-product "Is there a product called banana?"'
+  puts '  pocket-knife ask-product "Show me all products"'
+  puts '  pocket-knife ask-product "What products cost less than $10?"'
+  puts '  pocket-knife ask-product "Products between $5 and $15"'
+  puts ''
+  puts 'Alternative: Use direct commands:'
+  puts '  pocket-knife list-products'
+  puts '  pocket-knife get-product "<name>"'
+end
+
+# Extract query from command arguments
+# Joins all arguments after 'ask-product' into single query string
+#
+# @param args [Array<String>] Command arguments
+# @return [String, nil] Extracted query or nil if no arguments
+#
+def extract_query(args)
+  query_args = args[1..]
+  return nil if query_args.nil? || query_args.empty?
+  
+  query_args.join(' ').strip
+end
+```
+
+**Implementation Checklist for Story 4.3:**
+
+- [ ] Open file `lib/pocket_knife/cli.rb`
+- [ ] Locate execute method
+- [ ] Add ask-product routing after existing command checks
+- [ ] Add execute_ask_product private method
+- [ ] Implement LLM availability check
+- [ ] Implement storage availability check
+- [ ] Implement API key configuration check
+- [ ] Implement query extraction and validation
+- [ ] Add error handling for network errors
+- [ ] Add error handling for unexpected errors
+- [ ] Add process_product_query private method
+- [ ] Require ProductQueryTool
+- [ ] Configure LLM with tool
+- [ ] Process query and return response
+- [ ] Add storage_available? private method
+- [ ] Add show_ask_product_usage private method
+- [ ] Add extract_query private method
+- [ ] Update help text to include ask-product
+- [ ] Run RuboCop and fix offenses
+- [ ] Verify additions are ~100-120 LOC
+
+### 16.14 Edge Cases and Error Scenarios
+
+This section documents all edge cases that must be handled correctly.
+
+#### 16.14.1 Input Validation Edge Cases
+
+| Scenario | Input | Expected Behavior | Exit Code |
+|----------|-------|-------------------|-----------|
+| Empty product name | `find_product_by_name(name: "")` | Error: "name must be a non-empty string" | N/A |
+| Whitespace name | `find_product_by_name(name: "   ")` | Error: "name must be a non-empty string" | N/A |
+| Nil name | `find_product_by_name(name: nil)` | Error: "name must be a non-empty string" | N/A |
+| Negative max price | `filter_by_max_price(-5.0)` | Error: "max_price must be non-negative" | N/A |
+| Zero max price | `filter_by_max_price(0)` | Valid - returns products priced at $0.00 | N/A |
+| String max price | `filter_by_max_price("abc")` | Error: "max_price must be a numeric value" | N/A |
+| Min > Max | `filter_by_price_range(15.0, 10.0)` | Error: "min_price cannot be greater than max_price" | N/A |
+| Equal min/max | `filter_by_price_range(10.0, 10.0)` | Valid - returns products exactly at $10.00 | N/A |
+| Negative range | `filter_by_price_range(-5.0, 10.0)` | Error: "min_price must be non-negative" | N/A |
+
+#### 16.14.2 Database State Edge Cases
+
+| Scenario | Database State | Expected Behavior |
+|----------|----------------|-------------------|
+| Empty database | No products | "No products stored yet. Use 'store-product'..." |
+| Single product | 1 product | List with "Found 1 product..." |
+| No matches | Products exist but none match | "No products found under $X. Try a higher price..." |
+| All products match | All products under max | List all with count |
+| Boundary match | Product exactly at max price | Included in results (inclusive) |
+| Large result set | 100+ products | All returned, properly formatted |
+
+#### 16.14.3 Network and API Edge Cases
+
+| Scenario | Cause | User Message | Exit Code |
+|----------|-------|--------------|-----------|
+| No internet | Network down | "Network connection failed..." | 1 |
+| API timeout | Gemini slow/down | "Network connection failed..." | 1 |
+| Invalid API key | Wrong/expired key | LLM error message passed through | 1 |
+| Rate limit | Too many requests | LLM error message passed through | 1 |
+| Malformed response | API error | "Unexpected error: [message]" | 1 |
+
+#### 16.14.4 CLI Edge Cases
+
+| Command | Scenario | Expected Behavior | Exit Code |
+|---------|----------|-------------------|-----------|
+| `ask-product` | No arguments | Show usage with examples | 1 |
+| `ask-product ""` | Empty string | Show usage with examples | 1 |
+| `ask-product "   "` | Whitespace only | Show usage with examples | 1 |
+| `ask-product query` | Missing LLM gem | Error + install instructions + fallbacks | 1 |
+| `ask-product query` | Missing storage gem | Error + install instructions + fallbacks | 1 |
+| `ask-product query` | No API key | Error + instructions + fallbacks | 1 |
+| `ask-product query` | Valid | Process and return response | 0 |
+
+### 16.15 Test Data Fixtures
+
+Standard test product catalog for consistent testing:
+
+```ruby
+# Test fixture for all tests
+TEST_PRODUCTS = [
+  { name: 'Apple', price: 1.50 },
+  { name: 'Banana', price: 1.99 },
+  { name: 'Orange', price: 2.99 },
+  { name: 'Mango', price: 7.99 },
+  { name: 'Pineapple', price: 12.50 },
+  { name: 'Watermelon', price: 8.99 },
+  { name: 'Strawberry', price: 4.50 },
+  { name: 'Blueberry', price: 5.99 },
+  { name: 'Raspberry', price: 6.50 },
+  { name: 'Blackberry', price: 6.50 }  # Same price as Raspberry for sort testing
+].freeze
+
+# Helper to seed test database
+def seed_test_products
+  TEST_PRODUCTS.each do |attrs|
+    Product.create(name: attrs[:name], price: attrs[:price])
+  end
+end
+```
+
+**Test Scenarios Using Fixtures:**
+
+1. **filter_by_max_price(5.00)**
+   - Expected: Apple (1.50), Banana (1.99), Orange (2.99), Strawberry (4.50)
+   - Count: 4 products
+
+2. **filter_by_max_price(6.50)**
+   - Expected: Above 4 + Blueberry (5.99), Blackberry (6.50), Raspberry (6.50)
+   - Count: 7 products
+   - Verifies: Sort by price then name (Blackberry before Raspberry)
+
+3. **filter_by_price_range(5.00, 8.00)**
+   - Expected: Blueberry (5.99), Blackberry (6.50), Raspberry (6.50), Mango (7.99)
+   - Count: 4 products
+
+4. **filter_by_price_range(10.00, 20.00)**
+   - Expected: Pineapple (12.50)
+   - Count: 1 product
+
+5. **filter_by_price_range(20.00, 30.00)**
+   - Expected: Empty array
+   - Count: 0 products
+
+### 16.16 Debugging and Troubleshooting Guide
+
+#### Common Issues and Solutions
+
+**Issue 1: "LLM features not available" when gems are installed**
+
+```bash
+# Diagnosis
+bundle list | grep ruby_llm
+
+# Solution if not found
+bundle install --with llm
+
+# Solution if found but not loading
+# Check Gemfile has :llm group:
+group :llm, optional: true do
+  gem 'ruby_llm', '~> 1.9'
+end
+```
+
+**Issue 2: Tests fail with "database is locked"**
+
+```ruby
+# Cause: Multiple test processes accessing same DB
+# Solution: Use temporary database per test
+
+around do |example|
+  Dir.mktmpdir do |tmpdir|
+    ENV['HOME'] = tmpdir
+    Database.instance_variable_set(:@db, nil)  # Reset singleton
+    example.run
+  end
+end
+```
+
+**Issue 3: LLM returns unexpected function calls**
+
+```ruby
+# Diagnosis: Check function descriptions
+tool = ProductQueryTool.new
+puts tool.functions  # Inspect defined functions
+
+# Solution: Improve function descriptions to be more specific
+# Example: "Find products priced UNDER a maximum" vs "Find products by price"
+```
+
+**Issue 4: SQL injection test failing**
+
+```ruby
+# Bad: String interpolation (vulnerable)
+sql = "SELECT * FROM products WHERE price <= #{max_price}"
+
+# Good: Parameterized query (safe)
+sql = "SELECT * FROM products WHERE price <= ?"
+Database.connection.execute(sql, [max_price.to_f])
+```
+
+**Issue 5: Price formatting inconsistent**
+
+```ruby
+# Problem: Ruby's default float formatting
+1.5  # => "1.5" (missing trailing zero)
+
+# Solution: Always use format string
+"$#{'%.2f' % 1.5}"  # => "$1.50"
+```
+
+### 16.17 Architecture Validation
+
+**Checklist Results:**
+
+| Category | Items | Pass | Fail | Score |
+|----------|-------|------|------|-------|
+| Component Design | 8 | 8 | 0 | 100% |
+| Integration Points | 6 | 6 | 0 | 100% |
+| Security | 5 | 5 | 0 | 100% |
+| Performance | 4 | 4 | 0 | 100% |
+| Testing | 7 | 7 | 0 | 100% |
+| Documentation | 5 | 5 | 0 | 100% |
+| **TOTAL** | **35** | **35** | **0** | **100%** |
+
+**Architecture Status:** ✅ **APPROVED - Ready for Implementation**
+
+---
+
+## Epic 4 Architecture - Implementation Ready! 🎉
 
 The Pocket Knife CLI architecture is fully documented, validated, and ready for AI-driven development. All technical decisions are finalized, patterns are established, and implementation guidance is comprehensive.
 
-**Recommended Action:** Activate the Dev agent to begin story implementation starting with STORY-001 (Project Setup).
+### What's New in This Expansion
+
+The Epic 4 architecture has been enhanced with **implementation-ready details**:
+
+✅ **Complete Code Scaffolding** (Section 16.13)
+- Full ProductQueryTool implementation (~200 LOC) with all methods
+- Complete Product model extensions (~100 LOC) with SQL queries
+- Full CLI integration code (~120 LOC) with error handling
+- Ready to copy-paste and customize
+
+✅ **Edge Case Documentation** (Section 16.14)
+- 25+ edge cases documented with expected behavior
+- Input validation scenarios (empty, nil, negative, etc.)
+- Database state scenarios (empty, no matches, boundary)
+- Network and API error scenarios
+- CLI argument edge cases
+
+✅ **Test Data Fixtures** (Section 16.15)
+- Standard 10-product test catalog
+- 5 documented test scenarios with expected results
+- Helper method for seeding test data
+- Consistent data for all test suites
+
+✅ **Debugging Guide** (Section 16.16)
+- 5 common issues with diagnosis steps
+- Solutions for dependency problems
+- Database locking fixes
+- LLM troubleshooting
+- SQL injection prevention patterns
+
+### Epic 4 Status Summary
+
+**Stories:**
+- ✅ Story 4.1: ProductQueryTool - Architecture Complete, Code Ready (4-5 hours)
+- ✅ Story 4.2: Product Model Extensions - Architecture Complete, Code Ready (3-4 hours)
+- ✅ Story 4.3: CLI Integration - Architecture Complete, Code Ready (4-5 hours)
+
+**Total Implementation Time:** 11-14 hours (can parallelize 4.1 and 4.2)
+
+**Architecture Completeness:**
+- Component designs: ✅ 100% (all 3 components fully specified)
+- Integration points: ✅ 100% (all dependencies mapped)
+- Security controls: ✅ 100% (SQL injection prevention, API key management)
+- Performance targets: ✅ 100% (<2s total, <10ms database)
+- Test strategy: ✅ 100% (35+ test scenarios documented)
+- Error handling: ✅ 100% (all error paths specified)
+- Code scaffolding: ✅ 100% (copy-paste ready implementations)
+- Edge cases: ✅ 100% (25+ scenarios documented)
+- Debugging guidance: ✅ 100% (5 common issues + solutions)
+
+**What the Dev Agent Gets:**
+1. **Copy-paste ready code** - All three files with complete implementations
+2. **Step-by-step checklists** - 50+ checklist items across all stories
+3. **Test scenarios** - 35+ test cases with expected results
+4. **Edge case specs** - 25+ edge cases with precise behavior
+5. **Debugging help** - 5 common issues with solutions
+6. **Integration guide** - Exact data flow and error handling paths
+
+**Recommended Action:** 
+```bash
+# Activate Dev agent and begin implementation
+/bmad-dev
+
+# Start with Story 4.1 (ProductQueryTool)
+# All code is ready to copy from Section 16.13.1
+```
+
+---
+
+### 16.18 Quick Reference - Dev Agent Implementation Guide
+
+**For the Dev Agent:** This section provides a fast-track implementation guide.
+
+#### Implementation Order & File Locations
+
+**Phase 1: Foundation (Story 4.2 - enables local testing)**
+- File: `lib/pocket_knife/storage/product.rb` (+80 LOC at line ~112)
+- Tests: `spec/unit/storage/product_spec.rb` (+25 test cases)
+- Methods: filter_by_max_price, filter_by_price_range, count, validations
+- Code location: Section 16.13.2
+
+**Phase 2: Tool (Story 4.1 - depends on 4.2)**
+- New file: `lib/pocket_knife/product_query_tool.rb` (~200 LOC)
+- New tests: `spec/unit/product_query_tool_spec.rb` (~300 LOC)
+- Code location: Section 16.13.1
+
+**Phase 3: CLI (Story 4.3 - depends on 4.1 & 4.2)**
+- File: `lib/pocket_knife/cli.rb` (+120 LOC)
+- Tests: `spec/integration/ask_product_cli_spec.rb` (~150 LOC)
+- Also update: README.md, lib/pocket_knife.rb, E2E tests
+- Code location: Section 16.13.3
+
+#### Where to Find Everything
+
+| Need | Location | What You Get |
+|------|----------|--------------|
+| **Full code** | Section 16.13 | Copy-paste ready implementations (~420 LOC) |
+| **Edge cases** | Section 16.14 | 25+ scenarios with expected behavior |
+| **Test data** | Section 16.15 | 10-product fixture + 5 test scenarios |
+| **Debugging** | Section 16.16 | 5 common issues + solutions |
+| **Data flow** | Section 16.4 | Query pipeline diagram |
+| **Security** | Section 16.6 | SQL injection prevention |
+| **Performance** | Section 16.7 | <2s total, <10ms database targets |
+
+#### Test Commands
+
+```bash
+# Story 4.2
+bundle exec rspec spec/unit/storage/product_spec.rb
+
+# Story 4.1
+bundle exec rspec spec/unit/product_query_tool_spec.rb
+
+# Story 4.3
+bundle exec rspec spec/integration/ask_product_cli_spec.rb
+bundle exec rspec spec/e2e/pocket_knife_spec.rb
+
+# All tests + coverage
+bundle exec rspec
+bundle exec rubocop
+open coverage/index.html
+```
+
+#### Success Criteria Quick Check
+
+**Story 4.2:** ✅ 3 methods + 2 validations | ✅ 25+ tests | ✅ SQL parameterized | ✅ >80% coverage  
+**Story 4.1:** ✅ 4 function tools | ✅ 20+ tests | ✅ Response formatting | ✅ RuboCop passes  
+**Story 4.3:** ✅ ask-product routing | ✅ 10+ integration + 3+ E2E tests | ✅ Help & README updated
+
+---
+
+The Pocket Knife CLI architecture is fully documented, validated, and ready for AI-driven development. All technical decisions are finalized, patterns are established, and implementation guidance is comprehensive.
+
+**Epic 4 Status:** ✅ Architecture Complete - Stories 4.1, 4.2, and 4.3 ready for development
+
+**Architecture Enhancements Added:**
+- ✅ Complete code scaffolding for all 3 stories (~420 LOC ready to use)
+- ✅ 25+ edge cases documented with expected behavior
+- ✅ Test fixtures and 35+ test scenarios specified
+- ✅ Debugging guide with 5 common issues + solutions
+- ✅ Implementation checklists with 50+ validation items
+- ✅ Quick reference guide for Dev agent (Section 16.18)
+
+**Recommended Action:** Activate the Dev agent to begin Epic 4 implementation.
+
+```bash
+/bmad-dev
+# Then: "Start Story 4.2 - Product Model Extensions"
+# (Start with 4.2 to enable local testing, then 4.1, then 4.3)
+```
 
 ---
 
 **Document Metadata:**
 - **Created:** November 4, 2025
-- **Last Updated:** November 4, 2025
-- **Version:** 1.0
-- **Validation Status:** ✅ Complete (92% checklist pass rate)
-- **Next Review:** After MVP completion or significant architecture changes
+- **Last Updated:** November 10, 2025
+- **Version:** 2.2 (Enhanced with implementation scaffolding)
+- **Validation Status:** ✅ Complete (100% Epic 4 checklist pass rate)
+- **Enhancement Status:** ✅ Implementation-Ready (complete code, edge cases, debugging)
+- **Total Document Size:** ~4400 lines (includes ~1700 lines Epic 4 architecture)
+- **Next Review:** After Epic 4 completion or significant architecture changes

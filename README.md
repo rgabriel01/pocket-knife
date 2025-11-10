@@ -332,6 +332,208 @@ pocket-knife store-product "Tea"
 - Backup and remove: `mv ~/.pocket-knife/products.db ~/.pocket-knife/products.db.backup`
 - Try your command again (database will be recreated)
 
+## Natural Language Product Queries
+
+Pocket Knife combines LLM and Storage features to enable natural language queries over your product database. Query your products using plain English instead of remembering exact syntax.
+
+### Requirements
+
+This feature requires **both** optional dependencies:
+
+```bash
+bundle config set --local with 'llm storage'
+bundle install
+```
+
+You also need:
+- Configured Gemini API key (see [Optional LLM Features](#optional-llm-features))
+- At least one product stored (see [Optional Product Storage](#optional-product-storage))
+
+### Usage
+
+```bash
+pocket-knife ask-product "<your natural language query>"
+```
+
+### Supported Query Types
+
+#### 1. Product Existence Queries
+
+Check if a product exists in your database:
+
+```bash
+pocket-knife ask-product "Is there a product called banana?"
+pocket-knife ask-product "Do I have coffee in stock?"
+pocket-knife ask-product "Find the product named milk"
+```
+
+**Example Output:**
+```
+Product found: Banana
+  Name: Banana
+  Price: $200.00
+  ID: 2
+```
+
+#### 2. List All Products
+
+View all products in your database:
+
+```bash
+pocket-knife ask-product "Show me all products"
+pocket-knife ask-product "List all products"
+pocket-knife ask-product "What products do I have?"
+```
+
+**Example Output:**
+```
+Found 3 products:
+
+1. Apple - $1.50
+2. Banana - $0.75
+3. Orange - $2.00
+```
+
+#### 3. Price Filtering
+
+Find products under a maximum price:
+
+```bash
+pocket-knife ask-product "Show me products under $10"
+pocket-knife ask-product "What costs less than $5?"
+pocket-knife ask-product "Products priced below 20 dollars"
+```
+
+**Example Output:**
+```
+Found 2 products under $10.00:
+
+1. Apple - $1.50
+2. Banana - $0.75
+```
+
+#### 4. Price Range Queries
+
+Find products within a price range:
+
+```bash
+pocket-knife ask-product "Products between $5 and $15"
+pocket-knife ask-product "Show me items priced from $10 to $20"
+pocket-knife ask-product "What costs between 1 and 3 dollars?"
+```
+
+**Example Output:**
+```
+Found 1 product between $5.00 and $15.00:
+
+1. Orange - $12.99
+```
+
+### Natural Language Variations
+
+The LLM understands many different ways to phrase the same query:
+
+**Existence:**
+- "Is there a product called X?"
+- "Do you have X?"
+- "Find X"
+- "Look for X"
+
+**List All:**
+- "Show me all products"
+- "List everything"
+- "What do I have?"
+- "Display all items"
+
+**Price Filtering:**
+- "Products under $X"
+- "Items below X dollars"
+- "What costs less than $X?"
+- "Show me cheap items under X"
+
+**Price Range:**
+- "Products between $X and $Y"
+- "Items from X to Y dollars"
+- "What costs between X and Y?"
+- "Show me products priced from X to Y"
+
+### When to Use ask-product vs Direct Commands
+
+| Scenario | Use `ask-product` | Use Direct Commands |
+|----------|-------------------|---------------------|
+| Exploring product data | ✅ | ❌ |
+| Fuzzy/approximate queries | ✅ | ❌ |
+| Complex filtering | ✅ | ❌ |
+| Known exact product name | ❌ | ✅ `get-product` |
+| Offline access needed | ❌ | ✅ `list-products` |
+| Scripting/automation | ❌ | ✅ Direct commands |
+| Speed-critical | ❌ | ✅ Direct commands |
+
+**Recommendation:** Use `ask-product` for interactive exploration and natural queries. Use direct commands (`get-product`, `list-products`) for scripts, automation, or when working offline.
+
+### Examples
+
+```bash
+# After storing some products:
+pocket-knife store-product "Coffee" 12.99
+pocket-knife store-product "Tea" 8.50
+pocket-knife store-product "Milk" 3.50
+
+# Query with natural language:
+pocket-knife ask-product "What beverages cost under $10?"
+# Output: Found 2 products under $10.00: Tea ($8.50), Milk ($3.50)
+
+pocket-knife ask-product "Is coffee in my database?"
+# Output: Product found: Coffee - $12.99
+
+pocket-knife ask-product "Show me everything between $5 and $15"
+# Output: Found 2 products: Coffee ($12.99), Tea ($8.50)
+```
+
+### Troubleshooting
+
+**"LLM features not available" error:**
+- Install LLM dependencies: `bundle install --with llm`
+- See [Optional LLM Features](#optional-llm-features) section
+
+**"Storage features not available" error:**
+- Install storage dependencies: `bundle install --with storage`
+- See [Optional Product Storage](#optional-product-storage) section
+
+**"No API key configured" error:**
+- Configure your Gemini API key
+- See [Optional LLM Features - Setup](#setup) section
+
+**"Missing query" error:**
+- Ensure you provide a query string after the command
+- Wrap multi-word queries in quotes: `pocket-knife ask-product "show me all"`
+
+**No products found:**
+- Verify products are stored: `pocket-knife list-products`
+- Check query phrasing (try different variations)
+- Ensure the LLM understood your intent (check response)
+
+**Unexpected results:**
+- The LLM interprets natural language - try rephrasing your query
+- For exact matches, use direct commands: `pocket-knife get-product "exact name"`
+- Check available products: `pocket-knife list-products`
+
+**For offline product access:**
+Use direct commands that don't require LLM:
+```bash
+pocket-knife list-products          # List all products
+pocket-knife get-product "Coffee"   # Get specific product
+```
+
+### Privacy & Data
+
+- **Product Data:** Stored locally in `~/.pocket-knife/products.db`
+- **Query Processing:** Your natural language query is sent to Google Gemini API
+- **Product Privacy:** The LLM processes queries but your stored products remain local
+- **No History:** Queries and results are not stored or logged
+
+**Best Practice:** If handling sensitive product data, use direct commands (`get-product`, `list-products`) to avoid sending queries to external APIs.
+
 ## Development
 
 ### Setup

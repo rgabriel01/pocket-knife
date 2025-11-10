@@ -2,7 +2,14 @@
 
 ## Executive Summary
 
-Pocket Knife is a lightweight Ruby CLI toolkit designed to provide quick, reliable percentage calculations directly in the terminal. Built for developers and technical users who need instant mathematical computations without leaving their workflow, the tool offers a simple command-line interface for calculating percentages from a given amount and percentage value. Starting with percentage calculations as its foundational feature, Pocket Knife aims to be the go-to utility for terminal-based quick math, with potential to expand into a comprehensive calculation toolkit.
+Pocket Knife is a comprehensive Ruby CLI toolkit designed to provide quick, reliable calculations and product management directly in the terminal. Built for developers and technical users who need instant mathematical computations and product cataloging without leaving their workflow, the tool offers multiple command-line interfaces including:
+
+- **Core Calculator:** Basic percentage calculations (`calc` command)
+- **Natural Language Interface:** LLM-powered conversational calculations (`ask` command)
+- **Product Storage:** SQLite-based product catalog with CRUD operations
+- **Natural Language Product Queries:** Query products using natural language (`ask-product` command)
+
+Starting with percentage calculations as its foundational feature, Pocket Knife has evolved into a comprehensive terminal toolkit that combines traditional CLI commands with modern AI-powered natural language interfaces. The optional feature architecture allows users to install only what they need (core calculator, LLM features, storage features, or all combined).
 
 ## Problem Statement
 
@@ -383,20 +390,25 @@ Please review this brief thoroughly and proceed to create the PRD. The PRD shoul
 
 ### Next Steps
 
-**Story 3.2: List and Retrieve Products** - PLANNED
+**Epic 4: Natural Language Product Query Interface** - PLANNED
+- **Story 4.1:** Product Query Tool with LLM function definitions (4-5 hours)
+- **Story 4.2:** Extend Product Model with query methods (3-4 hours)
+- **Story 4.3:** Implement ask-product CLI command (4-5 hours)
+- Total: 11-14 hours (2-3 days)
+- See `docs/epic-product-query.md` for full details
+
+**Story 3.2: List and Retrieve Products** - COMPLETED
 - `list-products` command (formatted table display)
 - `get-product "<name>"` command (detailed product view)
-- Estimated: 2-3 hours
 
-**Story 3.3: Update and Delete Products** - PLANNED  
+**Story 3.3: Update and Delete Products** - COMPLETED  
 - `update-product` and `delete-product` commands
 - Confirmation prompts for destructive actions
-- Estimated: 2 hours
 
-**Story 3.4: Calculate on Stored Products** - PLANNED
+**Story 3.4: Calculate on Stored Products** - DEFERRED
 - `calc-product "<name>" <percentage>` command
 - Integration with existing calc logic
-- Estimated: 1-2 hours
+- Deferred in favor of more powerful natural language interface (Epic 4)
 
 ### Key Achievements
 
