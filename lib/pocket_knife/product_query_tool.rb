@@ -16,8 +16,51 @@ module PocketKnife
   #   result = tool.find_product_by_name(name: "Banana")
   #   result # => "Product found: Banana - $1.99"
   class ProductQueryTool < RubyLLM::Tool
-    description 'Query product database. Methods: find_product_by_name(name), list_all_products(), ' \
-                'filter_products_by_max_price(max_price), filter_products_by_price_range(min_price, max_price)'
+    description 'Query product database. Can find products by name, list all products, ' \
+                'filter by max price, or filter by price range. Can compare products and their prices'
+
+    param :action,
+          type: 'string',
+          desc: 'The action to perform: "find_by_name", "list_all", "filter_by_max_price", or "filter_by_price_range"'
+
+    param :name,
+          type: 'string',
+          desc: 'Product name to search for (required for find_by_name action) and returns the price',
+          required: false
+
+    param :max_price,
+          type: 'number',
+          desc: 'Maximum price threshold (required for filter_by_max_price action)',
+          required: false
+
+    param :min_price,
+          type: 'number',
+          desc: 'Minimum price for range (required for filter_by_price_range action)',
+          required: false
+
+    # Execute the appropriate product query action
+    #
+    # @param action [String] The action to perform
+    # @param name [String, nil] Product name (for find_by_name)
+    # @param max_price [Numeric, nil] Maximum price (for filter_by_max_price)
+    # @param min_price [Numeric, nil] Minimum price (for filter_by_price_range)
+    # @return [String] The result of the query
+    def execute(action:, name: nil, max_price: nil, min_price: nil)
+      case action
+      when 'find_by_name'
+        find_product_by_name(name: name)
+      when 'list_all'
+        list_all_products
+      when 'filter_by_max_price'
+        filter_products_by_max_price(max_price: max_price)
+      when 'filter_by_price_range'
+        filter_products_by_price_range(min_price: min_price, max_price: max_price)
+      else
+        "Error: Unknown action '#{action}'. Valid actions: find_by_name, list_all, filter_by_max_price, filter_by_price_range"
+      end
+    rescue StandardError => e
+      "Error executing #{action}: #{e.message}"
+    end
 
     # Execute: Find product by name
     #
